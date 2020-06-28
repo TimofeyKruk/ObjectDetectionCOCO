@@ -23,7 +23,7 @@ def analyze_video(model):
         out.write(frame)
         cv2.imshow("frame", frame)
         # An exit from the infinitive loop
-        if cv2.waitKey(25) & 0xFF == ord('q'):
+        if cv2.waitKey(50) & 0xFF == ord('q'):
             break
 
     cap.release()
