@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     for batch in train_l:
         img, lab = batch
-        npimg=np.transpose(img.numpy()[0, :, :, :], (1, 2, 0))
+        npimg = np.transpose(img.numpy()[0, :, :, :], (1, 2, 0))
         plt.imshow(np.transpose(img.numpy()[0, :, :, :], (1, 2, 0)))
         plt.show()
         print("Label: ", lab[0].keys())
