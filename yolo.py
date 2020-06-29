@@ -126,4 +126,6 @@ def train_model(model_yolo, train, test, PATH, tensorboard, epoch=10, cuda=True,
 
 
 if __name__ == '__main__':
-    print(conv_layer(32, 64, 3, 1, 0, True))
+    myNet = modelYOLO(80)
+
+    print(myNet)

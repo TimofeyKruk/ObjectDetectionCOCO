@@ -42,13 +42,42 @@ if __name__ == '__main__':
     train_l = loadCOCO(train_bool=True)
     print("Loader starts!")
 
+    step=0
+    print("Trying to print boxes:")
     for batch in train_l:
         img, lab = batch
         npimg = np.transpose(img.numpy()[0, :, :, :], (1, 2, 0))
-        plt.imshow(np.transpose(img.numpy()[0, :, :, :], (1, 2, 0)))
-        plt.show()
-        print("Label: ", lab[0].keys())
-        break
+        plt.imshow(npimg)
 
-    a = train_l.dataset.coco.getCatIds("banana")
-    print(a)
+        coco = train_l.dataset.coco
+        coco.showAnns(lab)
+        plt.show()
+
+        #print(coco)
+        #print("Label: ", lab[0].keys())
+
+        print(npimg.shape)
+        if step==15:
+            break
+        else:
+            step+=1
+
+
+
+    # coco = train_l.dataset.coco
+    #
+    # catIds=coco.getCatIds(catNms=["person","dog","skateboard"])
+    # print("CatIds: ",catIds)
+    # imgIds=coco.getImgIds(catIds=catIds)
+    # print("ImgIds: ",imgIds)
+    # img=coco.loadImgs(imgIds[0])
+    # print("Image: ",img)
+    # print("Img URL: ",img[0]["coco_url"])
+    #
+    # print(type(img))
+    # plt.imshow(img)
+    # plt.show()
+
+    #
+    # a = train_l.dataset.coco.getCatIds("umbrella")
+    # print(a)
