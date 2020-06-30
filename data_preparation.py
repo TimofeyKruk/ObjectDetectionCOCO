@@ -10,6 +10,7 @@ def loadCOCO(train_bool=True, batch_size=1):
     """Loading train loaders of COCO detection dataset"""
 
     # Maybe later will add more transformations
+    # !!! This is for both images and targets !!!
     transform = transforms.Compose([transforms.ToTensor()])
     PATH = "F:\WORK_Oxagile\INTERN\Datasets\COCO\\"
 
@@ -25,7 +26,8 @@ def loadCOCO(train_bool=True, batch_size=1):
     else:
         test = torchvision.datasets.CocoDetection(root=PATH + "images\\test2014\\test2014",
                                                   annFile=PATH + "annotations\image_info_test2014\\annotations\\image_info_test2014.json",
-                                                  transform=transform)
+                                                  transform=transform,
+                                                  target_transform=transform)
         test_l = dataloader.DataLoader(test,
                                        batch_size=batch_size,
                                        shuffle=True,
@@ -42,7 +44,7 @@ if __name__ == '__main__':
     train_l = loadCOCO(train_bool=True)
     print("Loader starts!")
 
-    step=0
+    step = 0
     print("Trying to print boxes:")
     for batch in train_l:
         img, lab = batch
@@ -53,16 +55,14 @@ if __name__ == '__main__':
         coco.showAnns(lab)
         plt.show()
 
-        #print(coco)
-        #print("Label: ", lab[0].keys())
+        # print(coco)
+        # print("Label: ", lab[0].keys())
 
         print(npimg.shape)
-        if step==15:
+        if step == 15:
             break
         else:
-            step+=1
-
-
+            step += 1
 
     # coco = train_l.dataset.coco
     #

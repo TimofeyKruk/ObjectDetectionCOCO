@@ -1,17 +1,18 @@
 import torch
 import torchvision
 import torch.nn as nn
+import yolo_loss
 
 
 def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=False, leaky_parameter=0.1,
                inplace=True):
     if max_pool is True:
-        return nn.Sequential(nn.Conv2d(in_dim, out_dim, filter_size, stride, padding, bias),
+        return nn.Sequential(nn.Conv2d(in_dim, out_dim, filter_size, stride, padding, bias=bias),
                              nn.BatchNorm2d(out_dim),
                              nn.LeakyReLU(leaky_parameter, inplace),
                              nn.MaxPool2d(2, 2))
     else:
-        return nn.Sequential(nn.Conv2d(in_dim, out_dim, filter_size, stride, padding, bias),
+        return nn.Sequential(nn.Conv2d(in_dim, out_dim, filter_size, stride, padding, bias=bias),
                              nn.BatchNorm2d(out_dim),
                              nn.LeakyReLU(leaky_parameter, inplace))
 
@@ -62,6 +63,7 @@ class modelYOLO(nn.Module):
 
     def forward(self, x):
         # First part before residual saving (feature extraction)
+        print(x.shape)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
@@ -93,6 +95,7 @@ class modelYOLO(nn.Module):
         output2 = self.residual_conv1(residual)
         # Reshaping the results
         batch_size, channels, h, w = output2.data.size()
+        print(batch_size, channels, h, w)
         output2 = output2.view(batch_size, int(channels / 4), h, 2, w, 2).contiguous()
         output2 = output2.permute(0, 3, 5, 1, 2, 4).contiguous()
         output2 = output2.view(batch_size, -1, int(h / 2), int(w / 2))
@@ -104,7 +107,8 @@ class modelYOLO(nn.Module):
         return output
 
 
-def train_model(model_yolo, train, test, PATH, tensorboard, epoch=10, cuda=True, save=True) -> modelYOLO:
+# TODO: implement tensorboard and learning rate scheduler and save model
+def train_model(model, train, test,num_classes, PATH, tensorboard, epochs=2, cuda=True, save=True) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
     :param train: train_loader <- data to train the model
@@ -115,14 +119,42 @@ def train_model(model_yolo, train, test, PATH, tensorboard, epoch=10, cuda=True,
     :param save:bool <- variable for saving model weights or not
     :return: model_yolo: modelYOLO object <- trained model
     '''
+    criterion = yolo_loss.yoloLoss(num_classes)
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
 
     if cuda is True and torch.cuda.is_available() is True:
         device = torch.device("cuda:0")
+        model.to(device)
+
     else:
         device = torch.device("cpu")
     print("Device: ", device)
 
-    return model_yolo
+    for epoch in range(epochs):
+        running_loss = 0.0
+
+        for i, data in enumerate(train):
+
+            data.to(device)
+            if torch.cuda.is_available() and cuda:
+                images, targets = data
+
+            optimizer.zero_grad()
+
+            outputs =model(images)
+
+            loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
+            loss_total.backward()
+
+            optimizer.step()
+
+            running_loss += loss_total
+
+            if i + 1 % 200 == 0:
+                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 200)
+
+    return model
 
 
 if __name__ == '__main__':

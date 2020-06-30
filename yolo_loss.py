@@ -5,7 +5,11 @@ import math
 
 class yoloLoss(nn.modules.loss._Loss):
     def __init__(self, num_classes,
-                 anchors,
+                 anchors=[(1.3221, 1.73145),
+                          (3.19275, 4.00944),
+                          (5.05587, 8.09892),
+                          (9.47112, 4.84053),
+                          (11.2364, 10.0071)],
                  cell_size=32,
                  coord_scale=0.1,
                  noobject_scale=1.0,
@@ -94,28 +98,17 @@ class yoloLoss(nn.modules.loss._Loss):
         confidence_mask = confidence_mask.sqrt()
         classes = classes[classes_mask].view(-1, self.num_classes)
 
-        #Losses
-        lossMSE=nn.MSELoss()
-        lossCE=nn.CrossEntropyLoss()
+        # Losses
+        lossMSE = nn.MSELoss()
+        lossCE = nn.CrossEntropyLoss()
 
-        self.loss_coordinates=self.coord_scale*lossMSE(coordinates_mask*coordinates,coordinates_mask*t_coord)
-        self.loss_confidence=lossMSE(confidence_mask*confidence,confidence_mask*t_conf)
-        self.loss_classes=self.class_scale*2*lossCE(classes,t_classes)
+        self.loss_coordinates = self.coord_scale * lossMSE(coordinates_mask * coordinates, coordinates_mask * t_coord)
+        self.loss_confidence = lossMSE(confidence_mask * confidence, confidence_mask * t_conf)
+        self.loss_classes = self.class_scale * 2 * lossCE(classes, t_classes)
 
-        self.loss_total=self.loss_confidence+self.loss_coordinates+self.loss_classes
+        self.loss_total = self.loss_confidence + self.loss_coordinates + self.loss_classes
 
-        return self.loss_total, self.loss_coordinates,self.loss_confidence, self.loss_classes
-
-
-
-
-
-
-
-
-
-
-
+        return self.loss_total, self.loss_coordinates, self.loss_confidence, self.loss_classes
 
     def build_target(self, predicted_boxes, target, height, width):
         '''
