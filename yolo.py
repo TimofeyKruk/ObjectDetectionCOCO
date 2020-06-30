@@ -63,8 +63,11 @@ class modelYOLO(nn.Module):
 
     def forward(self, x):
         # First part before residual saving (feature extraction)
-        print(x.shape)
+        print("NN input x shape ", x.shape)
+        print("X type before conv1 ",type(x))
         x = self.conv1(x)
+        print("After conv1 x shape ", x.shape)
+
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
@@ -108,7 +111,7 @@ class modelYOLO(nn.Module):
 
 
 # TODO: implement tensorboard and learning rate scheduler and save model
-def train_model(model, train, test,num_classes, PATH, tensorboard, epochs=2, cuda=True, save=True) -> modelYOLO:
+def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cuda=True, save=True) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
     :param train: train_loader <- data to train the model
@@ -136,13 +139,15 @@ def train_model(model, train, test,num_classes, PATH, tensorboard, epochs=2, cud
 
         for i, data in enumerate(train):
 
-            data.to(device)
             if torch.cuda.is_available() and cuda:
-                images, targets = data
+                print(type(data[1]))
+                images, targets = data[0].to(device),data[1].to(device)
+                images.to(device)
+                print("Images sent to CUDA")
 
             optimizer.zero_grad()
 
-            outputs =model(images)
+            outputs = model(images)
 
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
             loss_total.backward()
@@ -153,6 +158,10 @@ def train_model(model, train, test,num_classes, PATH, tensorboard, epochs=2, cud
 
             if i + 1 % 200 == 0:
                 print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 200)
+
+    if save is True:
+        torch.save(model.state_dict(), PATH)
+        print("Model was saved at file:", PATH)
 
     return model
 

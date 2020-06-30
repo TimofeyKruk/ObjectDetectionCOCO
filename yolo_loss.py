@@ -145,12 +145,12 @@ class yoloLoss(nn.modules.loss._Loss):
             # Getting boxes
             for i, annotation in enumerate(target[instance]):
                 # x center
-                gt_boxes[i, 0] = (annotation["bbox"][0] + annotation["bbox"][2] / 2) / self.cell_size
+                gt_boxes[i, 0] = (annotation[0] + annotation[2] / 2) / self.cell_size
                 # y center
-                gt_boxes[i, 1] = (annotation["bbox"][1] + annotation["bbox"][3] / 2) / self.cell_size
+                gt_boxes[i, 1] = (annotation[1] + annotation[3] / 2) / self.cell_size
                 # height and width
-                gt_boxes[i, 2] = (annotation["bbox"][2]) / self.cell_size
-                gt_boxes[i, 3] = (annotation["bbox"][3]) / self.cell_size
+                gt_boxes[i, 2:] = (annotation[2:]) / self.cell_size
+                #gt_boxes[i, 3] = (annotation[3]) / self.cell_size
 
             # Confidence mask elements set to true if predictions are greater than threshold (iou >thresh)
             iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes)
@@ -187,7 +187,7 @@ class yoloLoss(nn.modules.loss._Loss):
                     max(gt_boxes[i, 3], 1.0) / self.anchors[best_anchor, 1])
 
                 t_conf[instance][best_anchor][gj * width + gi] = iou
-                t_classes[instance][best_anchor][gj * width + gi] = int(annotation["category_id"])
+                t_classes[instance][best_anchor][gj * width + gi] = int(annotation[4])
 
         return coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes
 
