@@ -63,8 +63,7 @@ class modelYOLO(nn.Module):
 
     def forward(self, x):
         # First part before residual saving (feature extraction)
-        print("NN input x shape ", x.shape)
-        print("X type before conv1 ",type(x))
+        print("NN input x type ", len(x), type(x))
         x = self.conv1(x)
         print("After conv1 x shape ", x.shape)
 
@@ -122,16 +121,15 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
     :param save:bool <- variable for saving model weights or not
     :return: model_yolo: modelYOLO object <- trained model
     '''
-    criterion = yolo_loss.yoloLoss(num_classes)
+    criterion = yolo_loss.yoloLoss(num_classes,cuda=cuda)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
 
     if cuda is True and torch.cuda.is_available() is True:
         device = torch.device("cuda:0")
-        model.to(device)
-
     else:
         device = torch.device("cpu")
+    model.to(device)
     print("Device: ", device)
 
     for epoch in range(epochs):
@@ -140,10 +138,12 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
         for i, data in enumerate(train):
 
             if torch.cuda.is_available() and cuda:
-                print(type(data[1]))
-                images, targets = data[0].to(device),data[1].to(device)
-                images.to(device)
+                print("Data type (yolo.py): ", type(data[0]), type(data[1]))
+                images = data[0].to(device)
+                targets = [label.to(device) for label in data[1]]
                 print("Images sent to CUDA")
+            else:
+                images, targets = data[0], data[1]
 
             optimizer.zero_grad()
 
@@ -154,10 +154,11 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
 
             optimizer.step()
 
-            running_loss += loss_total
+            running_loss += loss_total.item()
 
-            if i + 1 % 200 == 0:
-                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 200)
+            if i + 1 % 5 == 0:
+                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss/5)
+                running_loss=0.0
 
     if save is True:
         torch.save(model.state_dict(), PATH)

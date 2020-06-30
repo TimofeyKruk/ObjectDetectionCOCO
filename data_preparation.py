@@ -4,6 +4,7 @@ from torch.utils.data import dataloader
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from custom_transform import Resize
 from torch.utils.data.dataloader import default_collate
 
@@ -12,7 +13,9 @@ def my_collate(batch):
     items = list(zip(*batch))
     items[0] = default_collate(items[0])
     items[1] = list(items[1])
-
+    # DOESN'T WORK! How should I act if there is no labels?
+    # items[1] = torch.cat([label.unsqueeze(dim=0) for label in items[1]],dim=0)
+    #print("Items1 : ", len(items[1]), type(items[1]))
     return items
 
 
@@ -29,10 +32,12 @@ def loadCOCO(img_size=448, train_bool=True, batch_size=32):
         train = torchvision.datasets.CocoDetection(root=PATH + "images\\train2014\\train2014",
                                                    annFile=PATH + "annotations\\annotations_trainval2014\\annotations\\instances_train2014.json",
                                                    transforms=Resize(img_size=img_size))
+        print("DataLoader started")
         train_l = dataloader.DataLoader(train,
                                         batch_size=batch_size,
                                         shuffle=True,
                                         collate_fn=my_collate,
+                                        pin_memory=True,
                                         num_workers=2)
         return train_l
     else:
@@ -41,8 +46,9 @@ def loadCOCO(img_size=448, train_bool=True, batch_size=32):
                                                   transforms=Resize(img_size=img_size))
         test_l = dataloader.DataLoader(test,
                                        batch_size=batch_size,
-                                       shuffle=True,
+                                       shuffle=False,
                                        collate_fn=my_collate,
+                                       pin_memory=True,
                                        num_workers=2)
         return test_l
 

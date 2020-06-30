@@ -36,5 +36,17 @@ class Resize():
         toTensor = transforms.ToTensor()
         image = toTensor(image)
         boxes = np.array(boxes, dtype=np.float32)
+
+        if len(boxes) != 0:
+            temp = []
+            for box in boxes:
+                temp.append(torch.tensor(box).unsqueeze(dim=0))
+            #print("Len temp cust transf: ", len(temp))
+            boxes = torch.cat(temp, dim=0)
+        else:
+            # TODO: What to do when there are no ground boxes?
+            boxes = torch.tensor([])
+            print(boxes.size, type(boxes))
+        # print("Custom transform boxes shape (cat,unsquize): ",image.shape,type(image))
         # print("After ToTensor() types: ",type(image),type(boxes),boxes.shape)
         return image, boxes
