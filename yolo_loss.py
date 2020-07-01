@@ -97,7 +97,8 @@ class yoloLoss(nn.modules.loss._Loss):
             coordinates_mask.cuda()
 
         confidence_mask = confidence_mask.sqrt()
-        classes = classes.where[classes_mask].view(-1, self.num_classes)
+        #TODO: I've deleted clsasses[classes_mask].view...
+        #classes = classes.view(-1, self.num_classes)
 
         # Losses
         lossMSE = nn.MSELoss()

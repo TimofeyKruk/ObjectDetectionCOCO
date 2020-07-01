@@ -63,10 +63,7 @@ class modelYOLO(nn.Module):
 
     def forward(self, x):
         # First part before residual saving (feature extraction)
-        print("NN input x type ", len(x), type(x))
         x = self.conv1(x)
-        print("After conv1 x shape ", x.shape)
-
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
@@ -97,7 +94,6 @@ class modelYOLO(nn.Module):
         output2 = self.residual_conv1(residual)
         # Reshaping the results
         batch_size, channels, h, w = output2.data.size()
-        print(batch_size, channels, h, w)
         output2 = output2.view(batch_size, int(channels / 4), h, 2, w, 2).contiguous()
         output2 = output2.permute(0, 3, 5, 1, 2, 4).contiguous()
         output2 = output2.view(batch_size, -1, int(h / 2), int(w / 2))
@@ -121,7 +117,7 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
     :param save:bool <- variable for saving model weights or not
     :return: model_yolo: modelYOLO object <- trained model
     '''
-    criterion = yolo_loss.yoloLoss(num_classes,cuda=cuda)
+    criterion = yolo_loss.yoloLoss(num_classes, cuda=cuda)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
 
@@ -134,8 +130,10 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
 
     for epoch in range(epochs):
         running_loss = 0.0
+        print("Epoch: ", epoch)
 
         for i, data in enumerate(train):
+            print("Batch number: ", i)
 
             if torch.cuda.is_available() and cuda:
                 print("Data type (yolo.py): ", type(data[0]), type(data[1]))
@@ -156,9 +154,11 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
 
             running_loss += loss_total.item()
 
-            if i + 1 % 5 == 0:
-                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss/5)
-                running_loss=0.0
+            print("Running loss: ", running_loss)
+            running_loss = 0.0
+            # if i + 1 % 2 == 0:
+            #     print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 5)
+            #     running_loss = 0.0
 
     if save is True:
         torch.save(model.state_dict(), PATH)
