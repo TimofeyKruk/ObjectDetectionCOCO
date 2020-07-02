@@ -59,7 +59,7 @@ class yoloLoss(nn.modules.loss._Loss):
         anchor_width = self.anchors[:, 0].contiguous().view(self.num_anchors, 1)
         anchor_height = self.anchors[:, 1].contiguous().view(self.num_anchors, 1)
 
-        # Switching to CUDA in any case (if possible)
+        # Switching to CUDA
         if torch.cuda.is_available() and self.cuda:
             predicted_boxes = predicted_boxes.cuda()
             lin_x = lin_x.cuda()
@@ -68,24 +68,24 @@ class yoloLoss(nn.modules.loss._Loss):
             anchor_height = anchor_height.cuda()
 
         # Calculating precise coordinates of boxes corresponding to the whole image
-
         # TODO: I have deleted .detach for cpu, but will I need it for GPU?
         predicted_boxes[:, 0] = (coordinates[:, :, 0].detach() + lin_x).view(-1)
         predicted_boxes[:, 1] = (coordinates[:, :, 1].detach() + lin_y).view(-1)
         predicted_boxes[:, 2] = (coordinates[:, :, 2].detach().exp() * anchor_width).view(-1)
         predicted_boxes[:, 3] = (coordinates[:, :, 3].detach().exp() * anchor_height).view(-1)
 
-        predicted_boxes = predicted_boxes.cpu()
+        #TODO: Maybe this line must be here
+        #predicted_boxes = predicted_boxes.cpu()
 
         # Receiving target values
-        coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes = self.build_targets(
+        coordinates_mask, confidence_mask, t_coord, t_conf, t_classes = self.build_targets(
             predicted_boxes, target, height, width)
 
         coordinates_mask.expand_as(t_coord)
-        #print("Coord mask shape", coordinates_mask.shape)
+        # print("Coord mask shape", coordinates_mask.shape)
 
         t_classes = t_classes.view(-1).long()
-        classes_mask = classes_mask.view(-1, 1).repeat(1, self.num_classes)
+        # classes_mask = classes_mask.view(-1, 1).repeat(1, self.num_classes)
 
         # Switching again to cuda
         if torch.cuda.is_available() and self.cuda:
@@ -93,12 +93,12 @@ class yoloLoss(nn.modules.loss._Loss):
             t_classes.cuda()
             t_conf.cuda()
             confidence_mask.cuda()
-            classes_mask.cuda()
+            # classes_mask.cuda()
             coordinates_mask.cuda()
 
         confidence_mask = confidence_mask.sqrt()
-        #TODO: I've deleted clsasses[classes_mask].view...
-        #classes = classes.view(-1, self.num_classes)
+        # TODO: I've deleted clsasses[classes_mask].view...
+        # classes = classes.view(-1, self.num_classes)
 
         # Losses
         lossMSE = nn.MSELoss()
@@ -123,13 +123,15 @@ class yoloLoss(nn.modules.loss._Loss):
         '''
         batch_size = len(target)
         # Masks initialization with ones
-        coordinates_mask = torch.zeros(batch_size, self.num_anchors, 1, height * width, requires_grad=False)
+        coordinates_mask = torch.zeros(batch_size, self.num_anchors, 1, height * width, requires_grad=False).type(
+            torch.ByteTensor)
         confidence_mask = self.noobject_scale * torch.ones(batch_size, self.num_anchors, height * width,
                                                            requires_grad=False)
-        classes_mask = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False)
+        # classes_mask = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False)
         t_coord = torch.zeros(batch_size, self.num_anchors, 4, height * width, requires_grad=False)
         t_conf = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False)
-        t_classes = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False)
+        t_classes = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False).type(
+            torch.ByteTensor)
 
         # Adding two zeros for anchors
         extended_anchors = torch.cat([torch.zeros_like(self.anchors), self.anchors], 1)
@@ -147,12 +149,14 @@ class yoloLoss(nn.modules.loss._Loss):
             # Getting boxes
             for i, annotation in enumerate(target[instance]):
                 # x center
-                gt_boxes[i, 0] = (annotation[0] + annotation[2] / 2) / self.cell_size
+                gt_boxes[i, 0] = (annotation[0] + annotation[2] / 2)
                 # y center
-                gt_boxes[i, 1] = (annotation[1] + annotation[3] / 2) / self.cell_size
+                gt_boxes[i, 1] = (annotation[1] + annotation[3] / 2)
                 # height and width
-                gt_boxes[i, 2] = (annotation[2]) / self.cell_size
-                gt_boxes[i, 3] = (annotation[3]) / self.cell_size
+                gt_boxes[i, 2] = (annotation[2])
+                gt_boxes[i, 3] = (annotation[3])
+            # Important to scale gt_boxes:
+            gt_boxes = gt_boxes / self.cell_size
 
             # Confidence mask elements set to true if predictions are greater than threshold (iou >thresh)
             iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes)
@@ -174,11 +178,11 @@ class yoloLoss(nn.modules.loss._Loss):
                 gi = int(min(width - 1, max(0, gt_boxes[i, 0])))
                 gj = int(min(height - 1, max(0, gt_boxes[i, 1])))
                 best_anchor = best_anchors[i].item()
-                #print(type(i), type(best_anchor), type(height), type(width), type(gj), type(gi))
+                # print(type(i), type(best_anchor), type(height), type(width), type(gj), type(gi))
                 iou = iou_gt_predicted[i][best_anchor * height * width + gj * height + gi]
 
                 coordinates_mask[instance][best_anchor][0][gj * width + gi] = 1
-                classes_mask[instance][best_anchor][gj * width + gi] = 1
+                # classes_mask[instance][best_anchor][gj * width + gi] = 1
                 confidence_mask[instance][best_anchor][gj * width + gi] = self.object_scale
 
                 t_coord[instance][best_anchor][0][gj * width + gi] = gt_boxes[i, 0] - gi
@@ -191,7 +195,7 @@ class yoloLoss(nn.modules.loss._Loss):
                 t_conf[instance][best_anchor][gj * width + gi] = iou
                 t_classes[instance][best_anchor][gj * width + gi] = int(annotation[4])
 
-        return coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes
+        return coordinates_mask, confidence_mask, t_coord, t_conf, t_classes
 
 
 def boxes_iou(boxes1, boxes2):
@@ -202,7 +206,7 @@ def boxes_iou(boxes1, boxes2):
     b2x2, b2y2 = (boxes2[:, :2] + (boxes2[:, 2:4] / 2)).split(1, 1)
 
     dx = (b1x2.min(b2x2.t()) - b1x1.max(b2x1.t())).clamp(min=0)
-    #print("yolo loss, dx shape", dx.shape)
+    # print("yolo loss, dx shape", dx.shape)
     dy = (b1y2.min(b2y2.t()) - b1y1.max(b2y1.t())).clamp(min=0)
     intersections = dx * dy
 

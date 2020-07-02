@@ -106,7 +106,7 @@ class modelYOLO(nn.Module):
 
 
 # TODO: implement tensorboard and learning rate scheduler and save model
-def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cuda=True, save=True) -> modelYOLO:
+def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=10, cuda=True, save=True) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
     :param train: train_loader <- data to train the model
@@ -119,8 +119,9 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
     '''
     criterion = yolo_loss.yoloLoss(num_classes, cuda=cuda)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9, weight_decay=0.1)
 
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[7, 12, 15], gamma=0.1)
     if cuda is True and torch.cuda.is_available() is True:
         device = torch.device("cuda:0")
     else:
@@ -133,13 +134,11 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
         print("Epoch: ", epoch)
 
         for i, data in enumerate(train):
-            print("Batch number: ", i)
 
             if torch.cuda.is_available() and cuda:
-                print("Data type (yolo.py): ", type(data[0]), type(data[1]))
                 images = data[0].to(device)
                 targets = [label.to(device) for label in data[1]]
-                print("Images sent to CUDA")
+                print("___Data sent to device CUDA")
             else:
                 images, targets = data[0], data[1]
 
@@ -148,21 +147,25 @@ def train_model(model, train, test, num_classes, PATH, tensorboard, epochs=2, cu
             outputs = model(images)
 
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
+
             loss_total.backward()
 
             optimizer.step()
 
             running_loss += loss_total.item()
 
-            print("Running loss: ", running_loss)
             running_loss = 0.0
-            # if i + 1 % 2 == 0:
-            #     print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 5)
-            #     running_loss = 0.0
+            if i + 1 % 50 == 0:
+                tensorboard.add_scalar("train loss", running_loss / 50, epoch * 2587 + i // 50)
+                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 50)
+                running_loss = 0.0
+
+    print("Last used LR: ", scheduler.get_last_lr())
+    scheduler.step()
 
     if save is True:
-        torch.save(model.state_dict(), PATH)
-        print("Model was saved at file:", PATH)
+        torch.save(model.state_dict(), saveName)
+        print("Model was saved at file:", saveName)
 
     return model
 
