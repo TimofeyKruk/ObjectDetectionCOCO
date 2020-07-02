@@ -1,10 +1,8 @@
 from pycocotools.coco import COCO
 import torchvision
 from torch.utils.data import dataloader
-from torchvision import transforms
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from custom_transform import Resize
 from torch.utils.data.dataloader import default_collate
 
@@ -38,7 +36,7 @@ def loadCOCO(PATH,img_size=448, train_bool=True, batch_size=32):
                                         shuffle=True,
                                         collate_fn=my_collate,
                                         pin_memory=True,
-                                        num_workers=4)
+                                        num_workers=2)
         return train_l
     else:
         test = torchvision.datasets.CocoDetection(root=PATH + "images\\test2014\\test2014",
@@ -50,7 +48,7 @@ def loadCOCO(PATH,img_size=448, train_bool=True, batch_size=32):
                                        shuffle=False,
                                        collate_fn=my_collate,
                                        pin_memory=True,
-                                       num_workers=4)
+                                       num_workers=2)
         return test_l
 
 
