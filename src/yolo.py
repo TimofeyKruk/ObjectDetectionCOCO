@@ -129,7 +129,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=1
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.00005, momentum=0.9, weight_decay=0.00005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[7, 12, 15], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 6, 10], gamma=0.1)
 
     for name, param in model.named_parameters():
         if param.device.type != 'cuda':
@@ -165,8 +165,8 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=1
                 print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 25)
                 running_loss = 0.0
 
-    print("Last used LR: ", scheduler.get_last_lr())
-    scheduler.step()
+        print("Last used LR: ", scheduler.get_last_lr())
+        scheduler.step()
 
     if save is True:
         torch.save(model.state_dict(), saveName)
