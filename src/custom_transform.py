@@ -46,7 +46,7 @@ class Resize():
         else:
             # TODO: What to do when there are no ground boxes?
             boxes = torch.tensor([])
-            print("___Zero number of GrTruth boxes detected:", boxes.size)
+            #print("___Zero number of GrTruth boxes detected:", boxes.size)
         # print("Custom transform boxes shape (cat,unsquize): ",image.shape,type(image))
         # print("After ToTensor() types: ",type(image),type(boxes),boxes.shape)
         return image, boxes

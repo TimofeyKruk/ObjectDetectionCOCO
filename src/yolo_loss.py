@@ -5,6 +5,7 @@ import math
 
 class yoloLoss(nn.modules.loss._Loss):
     def __init__(self, num_classes,
+                 device,
                  anchors=[(1.3221, 1.73145),
                           (3.19275, 4.00944),
                           (5.05587, 8.09892),
@@ -19,6 +20,7 @@ class yoloLoss(nn.modules.loss._Loss):
                  threshold=0.6) -> None:
         super().__init__()
 
+        self.device=device
         self.num_classes = num_classes
         self.num_anchors = len(anchors)
         self.anchors = torch.Tensor(anchors)
@@ -46,6 +48,7 @@ class yoloLoss(nn.modules.loss._Loss):
         # Fetching x,y,w,h,confidence,class
         output = output.view(batch_size, self.num_anchors, -1, height * width)
         coordinates = torch.zeros_like(output[:, :, :4, :])
+
         coordinates[:, :, :2, :] = output[:, :, :2, :].sigmoid()
         coordinates[:, :, 2:4, :] = output[:, :, 2:4, :]
         confidence = output[:, :, 4, :].sigmoid()
@@ -61,21 +64,21 @@ class yoloLoss(nn.modules.loss._Loss):
 
         # Switching to CUDA
         if torch.cuda.is_available() and self.cuda:
-            predicted_boxes = predicted_boxes.cuda()
-            lin_x = lin_x.cuda()
-            lin_y = lin_y.cuda()
-            anchor_width = anchor_width.cuda()
-            anchor_height = anchor_height.cuda()
+            predicted_boxes = predicted_boxes.to(self.device)
+            lin_x = lin_x.to(self.device)
+            lin_y = lin_y.to(self.device)
+            anchor_width = anchor_width.to(self.device)
+            anchor_height = anchor_height.to(self.device)
 
         # Calculating precise coordinates of boxes corresponding to the whole image
         # TODO: I have deleted .detach for cpu, but will I need it for GPU?
-        predicted_boxes[:, 0] = (coordinates[:, :, 0].detach() + lin_x).view(-1)
-        predicted_boxes[:, 1] = (coordinates[:, :, 1].detach() + lin_y).view(-1)
-        predicted_boxes[:, 2] = (coordinates[:, :, 2].detach().exp() * anchor_width).view(-1)
-        predicted_boxes[:, 3] = (coordinates[:, :, 3].detach().exp() * anchor_height).view(-1)
+        predicted_boxes[:, 0] = (coordinates[:, :, 0] + lin_x).view(-1)
+        predicted_boxes[:, 1] = (coordinates[:, :, 1]+ lin_y).view(-1)
+        predicted_boxes[:, 2] = (coordinates[:, :, 2].exp() * anchor_width).view(-1)
+        predicted_boxes[:, 3] = (coordinates[:, :, 3].exp() * anchor_height).view(-1)
 
-        #TODO: Maybe this line must be here
-        #predicted_boxes = predicted_boxes.cpu()
+        # TODO: Maybe this line must be here
+        # predicted_boxes = predicted_boxes.cpu()
 
         # Receiving target values
         coordinates_mask, confidence_mask, t_coord, t_conf, t_classes = self.build_targets(
@@ -87,14 +90,6 @@ class yoloLoss(nn.modules.loss._Loss):
         t_classes = t_classes.view(-1).long()
         # classes_mask = classes_mask.view(-1, 1).repeat(1, self.num_classes)
 
-        # Switching again to cuda
-        if torch.cuda.is_available() and self.cuda:
-            t_coord.cuda()
-            t_classes.cuda()
-            t_conf.cuda()
-            confidence_mask.cuda()
-            # classes_mask.cuda()
-            coordinates_mask.cuda()
 
         confidence_mask = confidence_mask.sqrt()
         # TODO: I've deleted clsasses[classes_mask].view...
@@ -103,8 +98,13 @@ class yoloLoss(nn.modules.loss._Loss):
         # Losses
         lossMSE = nn.MSELoss()
         lossCE = nn.CrossEntropyLoss()
+        # print("Variable {} is on device: {}".format("coordinates_mask", coordinates_mask.device.type))
+        # print("Variable {} is on device: {}".format("coordinates", coordinates.device.type))
+        # print("Variable {} is on device: {}".format("t_coord", t_coord.device.type))
 
-        self.loss_coordinates = self.coord_scale * lossMSE(coordinates_mask * coordinates, coordinates_mask * t_coord)
+        self.loss_coordinates = lossMSE(coordinates_mask * coordinates, coordinates_mask * t_coord)
+        self.loss_coordinates*=self.coord_scale
+
         self.loss_confidence = lossMSE(confidence_mask * confidence, confidence_mask * t_conf)
         self.loss_classes = self.class_scale * 2 * lossCE(classes, t_classes)
 
@@ -133,6 +133,16 @@ class yoloLoss(nn.modules.loss._Loss):
         t_classes = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False).type(
             torch.ByteTensor)
 
+        # Switching again to cuda
+        if torch.cuda.is_available() and self.cuda:
+            t_coord=t_coord.to(self.device)
+            t_classes=t_classes.to(self.device)
+            t_conf=t_conf.to(self.device)
+            confidence_mask=confidence_mask.to(self.device)
+            # classes_mask.cuda()
+            coordinates_mask=coordinates_mask.to(self.device)
+            #print("Variable {} is on device: {}".format("coordinates_mask in build_targets", coordinates_mask.device.type))
+
         # Adding two zeros for anchors
         extended_anchors = torch.cat([torch.zeros_like(self.anchors), self.anchors], 1)
 
@@ -145,6 +155,8 @@ class yoloLoss(nn.modules.loss._Loss):
                                                       (instance + 1) * (self.num_anchors * height * width)]
 
             gt_boxes = torch.zeros(len(target[instance]), 4)
+            if torch.cuda.is_available() and self.cuda:
+                gt_boxes.cuda()
 
             # Getting boxes
             for i, annotation in enumerate(target[instance]):
@@ -159,7 +171,7 @@ class yoloLoss(nn.modules.loss._Loss):
             gt_boxes = gt_boxes / self.cell_size
 
             # Confidence mask elements set to true if predictions are greater than threshold (iou >thresh)
-            iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes)
+            iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes, self.device)
             # print("Ground Truth boxes shape ", gt_boxes.shape)
             # print("Predicted boxes shape ", predicted_boxes.shape)
             temp_mask = (iou_gt_predicted > self.threshold).sum(0) >= 1
@@ -170,7 +182,7 @@ class yoloLoss(nn.modules.loss._Loss):
             # Searching for the best anchor for each groung truth box
             gt_hw_boxes = gt_boxes.clone().detach()
             gt_hw_boxes[:, :2] = 0
-            iou_hwgt_anchors = boxes_iou(gt_hw_boxes, extended_anchors)
+            iou_hwgt_anchors = boxes_iou(gt_hw_boxes, extended_anchors, self.device)
             _, best_anchors = iou_hwgt_anchors.max(1)
 
             # Setting masks and target value for each ground truth
@@ -198,12 +210,15 @@ class yoloLoss(nn.modules.loss._Loss):
         return coordinates_mask, confidence_mask, t_coord, t_conf, t_classes
 
 
-def boxes_iou(boxes1, boxes2):
-    b1x1, b1y1 = (boxes1[:, :2] - (boxes1[:, 2:4] / 2)).split(1, 1)
-    b1x2, b1y2 = (boxes1[:, :2] + (boxes1[:, 2:4] / 2)).split(1, 1)
+def boxes_iou(boxes1, boxes2, device):
+    #print("Before detach and .cpu?")
+    b1x1, b1y1 = (boxes1[:, :2].detach().cpu() - (boxes1[:, 2:4].detach().cpu() / 2)).split(1, 1)
+    b1x2, b1y2 = (boxes1[:, :2].detach().cpu() + (boxes1[:, 2:4].detach().cpu() / 2)).split(1, 1)
 
-    b2x1, b2y1 = (boxes2[:, :2] - (boxes2[:, 2:4] / 2)).split(1, 1)
-    b2x2, b2y2 = (boxes2[:, :2] + (boxes2[:, 2:4] / 2)).split(1, 1)
+    b2x1, b2y1 = (boxes2[:, :2].detach().cpu() - (boxes2[:, 2:4].detach().cpu() / 2)).split(1, 1)
+    b2x2, b2y2 = (boxes2[:, :2].detach().cpu() + (boxes2[:, 2:4].detach().cpu() / 2)).split(1, 1)
+
+    #("b1x1 device type: ",b1x1.device.type)
 
     dx = (b1x2.min(b2x2.t()) - b1x1.max(b2x1.t())).clamp(min=0)
     # print("yolo loss, dx shape", dx.shape)
@@ -213,6 +228,11 @@ def boxes_iou(boxes1, boxes2):
     area1 = (b1x2 - b1x1) * (b1y2 - b1y1)
     area2 = (b2x2 - b2x1) * (b2y2 - b2y1)
     unions = area1 + area2.t() - intersections
+
+    intersections=intersections.to(device)
+    unions=unions.to(device)
+    #print("intersections  after .to device type: ",intersections.device.type,"device given: ",device)
+
 
     return intersections / unions
 

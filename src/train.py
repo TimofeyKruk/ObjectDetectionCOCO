@@ -1,15 +1,18 @@
 from torch.utils.tensorboard import SummaryWriter
 import data_preparation
+import os
 import yolo
 import argparse
+import torch
 
 if __name__ == '__main__':
     print("YOLO Object Detection. Start.py")
-
+    print("CWD: ")
+    print("__CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
     parser.add_argument("--saveName", help="Name how to save model weights file", default="SavedModelWeights")
-    parser.add_argument("--dataset_path",help="PATH to dataset location",default="COCO\\")
-    parser.add_argument("--tensorboard", help="Name how to save tensorboard logs", default="runs/yolov2_training")
+    parser.add_argument("--dataset_path",help="PATH to dataset location",default="//media//cuda//HDD//Internship//Kruk//COCO//")
+    parser.add_argument("--tensorboard", help="Name how to save tensorboard logs", default="runs//yolov2_training")
     parser.add_argument("--img_size", help="Images will be scaled to img_size*img_size", default="448")
     parser.add_argument("--batch", help="Batch size", default="32")
     parser.add_argument("--num_classes", help="Int number of classes", default="95")
@@ -36,6 +39,7 @@ if __name__ == '__main__':
     model = yolo.modelYOLO(num_classes=num_classes)
 
     tensorboard = SummaryWriter(tensorboard_name)
+
     print("___Training started:")
     model = yolo.train_model(model,
                              train,
@@ -46,6 +50,8 @@ if __name__ == '__main__':
                              cuda=cuda,
                              epochs=epochs,
                              save=True)
+
+    tensorboard.add_graph(model, torch.rand(batch_size, 3, img_size_transform, img_size_transform))
 
 
     print("___Model trained, trying to add graph to tensorboard")
