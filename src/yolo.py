@@ -130,7 +130,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 6, 12], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 15, 22], gamma=0.1)
 
     for name, param in model.named_parameters():
         if param.device.type != 'cuda':

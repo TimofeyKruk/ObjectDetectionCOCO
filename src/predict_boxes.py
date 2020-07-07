@@ -26,14 +26,16 @@ if __name__ == '__main__':
 
     for data in train:
         images, targets = data[0], data[1]
-
-        plt.imshow(np.transpose(images.numpy()[2, :, :, :], (1, 2, 0)))
+        np_image=np.transpose(images.numpy()[3, :, :, :], (1, 2, 0))
+        print(np_image)
+        print("Max: ",np.max(np_image))
+        plt.imshow(np_image)
         plt.show()
         with torch.no_grad():
             outputs = model(images)
 
-        out = outputs[2].view(5, 100, 14, 14)
-        print("Outputs[0].view.shape", out.shape)
+        out = outputs[3].view(5, 100, 14, 14)
+        print("Outputs[3].view.shape", out.shape)
 
         # for i,anchor in enumerate(out):
         #     for position in range(196):
