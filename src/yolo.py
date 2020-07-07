@@ -124,33 +124,36 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=1
     model.to(device)
     print("Device: ", device)
 
-    criterion = yolo_loss.yoloLoss(num_classes, device=device,cuda=cuda)
-    criterion=criterion.to(device)
+    criterion = yolo_loss.yoloLoss(num_classes, device=device, cuda=cuda)
+    criterion = criterion.to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.00005, momentum=0.9, weight_decay=0.00005)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 5, 10], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1, 5, 14, 20], gamma=0.1)
 
     for name, param in model.named_parameters():
         if param.device.type != 'cuda':
-            print('param {}, not on GPU'.format(name),param.device.type)
+            print('param {}, not on GPU'.format(name), param.device.type)
 
     for epoch in range(epochs):
-        running_loss = 0.0
+        running_total = 0.0
+        running_coordinates = 0.0
+        running_confidence = 0.0
+        running_classes = 0.0
         print("Epoch: ", epoch)
 
         for i, data in enumerate(train):
             if torch.cuda.is_available() and cuda:
                 images = data[0].to(device)
                 targets = [label.to(device) for label in data[1]]
-                #print("___Data sent to device CUDA")
+                # print("___Data sent to device CUDA")
             else:
                 images, targets = data[0], data[1]
 
             optimizer.zero_grad()
 
             outputs = model(images)
-            #print("Variable {} is on device: {}".format("outputs",outputs.device.type))
+            # print("Variable {} is on device: {}".format("outputs",outputs.device.type))
 
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
 
@@ -158,19 +161,33 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=1
 
             optimizer.step()
 
-            running_loss += loss_total.item()
+            running_total += loss_total.item()
+            running_coordinates += loss_coordinates.item()
+            running_confidence +=loss_confidence.item()
+            running_classes +=loss_classes.item()
 
-            if (i + 1)% 25 == 0:
-                tensorboard.add_scalar("train loss", running_loss / 25, epoch * 2587 + i // 25)
-                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_loss / 25)
-                running_loss = 0.0
+            if (i + 1) % 25 == 0:
+                tensorboard.add_scalar("Total loss (train)", running_total / 25, (epoch * 2587 + i + 1) // 25)
+                tensorboard.add_scalar("Coordinates loss (train)", running_coordinates/ 25, (epoch * 2587 + i + 1) // 25)
+                tensorboard.add_scalar("Confidence loss (train)", running_confidence / 25, (epoch * 2587 + i + 1) // 25)
+                tensorboard.add_scalar("Classes loss (train)", running_classes / 25, (epoch * 2587 + i + 1) // 25)
+                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_total / 25)
+                running_total = 0.0
+                running_coordinates=0.0
+                running_confidence=0.0
+                running_classes=0.0
+
 
         print("Last used LR: ", scheduler.get_last_lr())
         scheduler.step()
 
+        if save is True and (epoch + 1) % 7 == 0:
+            torch.save(model.state_dict(), saveName + "after{}".format(str(epoch + 1)))
+            print("Model was saved at file:", saveName + "after{}".format(str(epoch + 1)))
+
     if save is True:
-        torch.save(model.state_dict(), saveName)
-        print("Model was saved at file:", saveName)
+        torch.save(model.state_dict(), saveName + "FINAL")
+        print("Model was saved at file:", saveName + "FINAL")
 
     return model
 

@@ -81,7 +81,7 @@ class yoloLoss(nn.modules.loss._Loss):
         # predicted_boxes = predicted_boxes.cpu()
 
         # Receiving target values
-        coordinates_mask, confidence_mask,classes_mask, t_coord, t_conf, t_classes = self.build_targets(
+        coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes = self.build_targets(
             predicted_boxes, target, height, width)
 
         coordinates_mask.expand_as(t_coord)
@@ -126,7 +126,8 @@ class yoloLoss(nn.modules.loss._Loss):
             torch.ByteTensor)
         confidence_mask = self.noobject_scale * torch.ones(batch_size, self.num_anchors, height * width,
                                                            requires_grad=False)
-        classes_mask = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False).type(torch.BoolTensor)
+        classes_mask = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False).type(
+            torch.BoolTensor)
         t_coord = torch.zeros(batch_size, self.num_anchors, 4, height * width, requires_grad=False)
         t_conf = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False)
         t_classes = torch.zeros(batch_size, self.num_anchors, height * width, requires_grad=False).type(
@@ -138,7 +139,7 @@ class yoloLoss(nn.modules.loss._Loss):
             t_classes = t_classes.to(self.device)
             t_conf = t_conf.to(self.device)
             confidence_mask = confidence_mask.to(self.device)
-            classes_mask=classes_mask.to(self.device)
+            classes_mask = classes_mask.to(self.device)
             coordinates_mask = coordinates_mask.to(self.device)
             # print("Variable {} is on device: {}".format("coordinates_mask in build_targets", coordinates_mask.device.type))
 
@@ -172,9 +173,9 @@ class yoloLoss(nn.modules.loss._Loss):
             # Confidence mask elements set to true if predictions are greater than threshold (iou >thresh)
             iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes, self.device)
 
-            iou_check_for_zero=iou_gt_predicted<0
-            if len(iou_gt_predicted[iou_check_for_zero])!=0:
-                print("ZERO IoU for GT and predicted boxes!",len(iou_gt_predicted[iou_check_for_zero]))
+            iou_check_for_zero = iou_gt_predicted < 0
+            if len(iou_gt_predicted[iou_check_for_zero]) != 0:
+                print("ZERO IoU for GT and predicted boxes!", len(iou_gt_predicted[iou_check_for_zero]))
             # print("Ground Truth boxes shape ", gt_boxes.shape)
             # print("Predicted boxes shape ", predicted_boxes.shape)
             temp_mask = (iou_gt_predicted > self.threshold).sum(0) >= 1
@@ -195,7 +196,7 @@ class yoloLoss(nn.modules.loss._Loss):
                 best_anchor = best_anchors[i].item()
                 # print(type(i), type(best_anchor), type(height), type(width), type(gj), type(gi))
                 iou = iou_gt_predicted[i][best_anchor * height * width + gj * width + gi]
-                if iou<0:
+                if iou < 0:
                     print("ERRROR!!!!!! IOU < 0 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
                 coordinates_mask[instance][best_anchor][0][gj * width + gi] = 1
                 classes_mask[instance][best_anchor][gj * width + gi] = 1
@@ -211,7 +212,7 @@ class yoloLoss(nn.modules.loss._Loss):
                 t_conf[instance][best_anchor][gj * width + gi] = iou
                 t_classes[instance][best_anchor][gj * width + gi] = int(annotation[4])
 
-        return coordinates_mask, confidence_mask,classes_mask, t_coord, t_conf, t_classes
+        return coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes
 
 
 def boxes_iou(boxes1, boxes2, device):

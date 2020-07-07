@@ -12,7 +12,7 @@ def analyze_video(model):
 
     # for saving the video
     fourcc = cv2.VideoWriter_fourcc(*"XVID")
-    out = cv2.VideoWriter("output4.avi", fourcc, 20, (int(cap.get(3)),int(cap.get(4))))
+    out = cv2.VideoWriter("output4.avi", fourcc, 20, (int(cap.get(3)), int(cap.get(4))))
 
     while cap.isOpened():
         ret, frame = cap.read()

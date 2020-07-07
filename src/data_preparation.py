@@ -13,21 +13,21 @@ def my_collate(batch):
     items[1] = list(items[1])
     # DOESN'T WORK! How should I act if there is no labels?
     # items[1] = torch.cat([label.unsqueeze(dim=0) for label in items[1]],dim=0)
-    #print("Items1 : ", len(items[1]), type(items[1]))
+    # print("Items1 : ", len(items[1]), type(items[1]))
     return items
 
 
-def loadCOCO(PATH,img_size=448, train_bool=True, batch_size=32):
+def loadCOCO(PATH, img_size=448, train_bool=True, batch_size=32):
     """Loading train loaders of COCO detection dataset"""
 
     # Maybe later will add more transformations
     # !!! This is for both images and targets !!!
     # transform = transforms.Compose([transforms.ToTensor()])
 
-    #PATH = "F:\WORK_Oxagile\INTERN\Datasets\COCO\\"
+    # PATH = "F:\WORK_Oxagile\INTERN\Datasets\COCO\\"
 
     if train_bool is True:
-        train = torchvision.datasets.CocoDetection(root=PATH + "images//train2014",
+        train = torchvision.datasets.CocoDetection(root=PATH + "images//train2014//train2014",
                                                    annFile=PATH + "annotations//annotations_trainval2014//annotations//instances_train2014.json",
                                                    transforms=Resize(img_size=img_size))
         print("___DataLoader started! Batch size: ", batch_size)

@@ -13,26 +13,26 @@ def load_model(PATH, class_number=95):
 
 if __name__ == '__main__':
     print("Predicting object boxes started!")
-    PATH = "SavedModelWeights"
+    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\SavedModelWeights3after21"
     num_classes = 95
-    batch_size = 32
+    batch_size = 4
     img_size_transform = 448
 
     # Loading model from memory
     model = load_model(PATH, num_classes)
 
-    test = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform, train_bool=False,
+    train = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform, train_bool=True,
                                      batch_size=batch_size)
 
-    for data in test:
+    for data in train:
         images, targets = data[0], data[1]
 
-        plt.imshow(np.transpose(images.numpy()[6, :, :, :], (1, 2, 0)))
+        plt.imshow(np.transpose(images.numpy()[2, :, :, :], (1, 2, 0)))
         plt.show()
         with torch.no_grad():
             outputs = model(images)
 
-        out = outputs[6].view(5, 100, -1)
+        out = outputs[2].view(5, 100, -1)
         print("Outputs[0].view.shape", out.shape)
 
         # for i,anchor in enumerate(out):
@@ -43,10 +43,11 @@ if __name__ == '__main__':
         #     #print("Anchor: ",i,", Confidence: ",anchor[4],", class: ",max(anchor[5:]))
 
         for position in range(196):
-            #print("Position: ", position)
+            # print("Position: ", position)
             for anchor in range(5):
-                if out[anchor][4][position]>-3:
-                    print("position: ",position,", anchor: ", anchor, ", confidence: ", out[anchor][4][position], "boxes: x",
-                      out[anchor][0][position])
+                if out[anchor][4][position] < -3:
+                    print("position: ", position, ", anchor: ", anchor, ", confidence: ", out[anchor][4][position],
+                          "boxes: x",
+                          out[anchor][0][position])
 
         break
