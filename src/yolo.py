@@ -105,7 +105,8 @@ class modelYOLO(nn.Module):
 
 
 # TODO: implement tensorboard and learning rate scheduler and save model
-def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=10, cuda=True, save=True) -> modelYOLO:
+def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.001, epoch_start=0, epochs=10,
+                cuda=True, save=True) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
     :param train: train_loader <- data to train the model
@@ -127,15 +128,15 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=1
     criterion = yolo_loss.yoloLoss(num_classes, device=device, cuda=cuda)
     criterion = criterion.to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1, 5, 14, 20], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[2, 6, 12], gamma=0.1)
 
     for name, param in model.named_parameters():
         if param.device.type != 'cuda':
             print('param {}, not on GPU'.format(name), param.device.type)
 
-    for epoch in range(epochs):
+    for epoch in range(epoch_start, epoch_start + epochs):
         running_total = 0.0
         running_coordinates = 0.0
         running_confidence = 0.0
@@ -163,31 +164,31 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, epochs=1
 
             running_total += loss_total.item()
             running_coordinates += loss_coordinates.item()
-            running_confidence +=loss_confidence.item()
-            running_classes +=loss_classes.item()
+            running_confidence += loss_confidence.item()
+            running_classes += loss_classes.item()
 
             if (i + 1) % 25 == 0:
                 tensorboard.add_scalar("Total loss (train)", running_total / 25, (epoch * 2587 + i + 1) // 25)
-                tensorboard.add_scalar("Coordinates loss (train)", running_coordinates/ 25, (epoch * 2587 + i + 1) // 25)
+                tensorboard.add_scalar("Coordinates loss (train)", running_coordinates / 25,
+                                       (epoch * 2587 + i + 1) // 25)
                 tensorboard.add_scalar("Confidence loss (train)", running_confidence / 25, (epoch * 2587 + i + 1) // 25)
                 tensorboard.add_scalar("Classes loss (train)", running_classes / 25, (epoch * 2587 + i + 1) // 25)
                 print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_total / 25)
                 running_total = 0.0
-                running_coordinates=0.0
-                running_confidence=0.0
-                running_classes=0.0
-
+                running_coordinates = 0.0
+                running_confidence = 0.0
+                running_classes = 0.0
 
         print("Last used LR: ", scheduler.get_last_lr())
         scheduler.step()
 
         if save is True and (epoch + 1) % 7 == 0:
-            torch.save(model.state_dict(), saveName + "after{}".format(str(epoch + 1)))
-            print("Model was saved at file:", saveName + "after{}".format(str(epoch + 1)))
+            torch.save(model.state_dict(), saveName + "_after{}".format(str(epoch + 1)))
+            print("Model was saved at file:", saveName + "_after{}".format(str(epoch + 1)))
 
     if save is True:
-        torch.save(model.state_dict(), saveName + "FINAL")
-        print("Model was saved at file:", saveName + "FINAL")
+        torch.save(model.state_dict(), saveName + "_LAST")
+        print("Model was saved at file:", saveName + "_LAST")
 
     return model
 

@@ -17,7 +17,7 @@ def my_collate(batch):
     return items
 
 
-def loadCOCO(PATH, img_size=448, train_bool=True, batch_size=32):
+def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32):
     """Loading train loaders of COCO detection dataset"""
 
     # Maybe later will add more transformations
@@ -27,7 +27,7 @@ def loadCOCO(PATH, img_size=448, train_bool=True, batch_size=32):
     # PATH = "F:\WORK_Oxagile\INTERN\Datasets\COCO\\"
 
     if train_bool is True:
-        train = torchvision.datasets.CocoDetection(root=PATH + "images//train2014//train2014",
+        train = torchvision.datasets.CocoDetection(root=PATH + "images//train2014",
                                                    annFile=PATH + "annotations//annotations_trainval2014//annotations//instances_train2014.json",
                                                    transforms=Resize(img_size=img_size))
         print("___DataLoader started! Batch size: ", batch_size)

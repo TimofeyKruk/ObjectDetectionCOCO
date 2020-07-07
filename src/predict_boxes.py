@@ -21,8 +21,8 @@ if __name__ == '__main__':
     # Loading model from memory
     model = load_model(PATH, num_classes)
 
-    train = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform, train_bool=True,
-                                     batch_size=batch_size)
+    train = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform, train_bool=False,
+                                      batch_size=batch_size)
 
     for data in train:
         images, targets = data[0], data[1]
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         with torch.no_grad():
             outputs = model(images)
 
-        out = outputs[2].view(5, 100, -1)
+        out = outputs[2].view(5, 100, 14, 14)
         print("Outputs[0].view.shape", out.shape)
 
         # for i,anchor in enumerate(out):
@@ -42,12 +42,12 @@ if __name__ == '__main__':
         #             print("max class in confident position: ",position, torch.max(anchor[5:,position],dim=0)[1])
         #     #print("Anchor: ",i,", Confidence: ",anchor[4],", class: ",max(anchor[5:]))
 
-        for position in range(196):
-            # print("Position: ", position)
-            for anchor in range(5):
-                if out[anchor][4][position] < -3:
-                    print("position: ", position, ", anchor: ", anchor, ", confidence: ", out[anchor][4][position],
-                          "boxes: x",
-                          out[anchor][0][position])
+        for i in range(14):
+            for j in range(14):
+                print("Position: i", i, " j", j)
+                for anchor in range(5):
+                    if out[anchor, 4, i, j].sigmoid() > 0.02:
+                        print("Anchor: ", anchor, ", confidence: ", out[anchor, 4, i, j].sigmoid(), ", class: ",
+                              torch.argmax(torch.softmax(out[anchor, 5:, i, j], dim=0)))
 
         break
