@@ -4,6 +4,7 @@ import data_preparation
 import matplotlib.pyplot as plt
 import numpy as np
 
+## SMALL/SMALL
 
 def load_model(PATH, class_number=95):
     model = yolo.modelYOLO(num_classes=class_number)

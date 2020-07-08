@@ -5,19 +5,29 @@ import yolo
 import argparse
 import torch
 
+## SMALL/SMALL
+
 if __name__ == '__main__':
+
+    CLASSES={1:"person",
+             2: "car",
+             3: "bird",
+             4: "cat",
+             5: "dog"}
+
+
     print("YOLO Object Detection. Start.py")
     print("CWD: ")
     print("__CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saveName", help="Name how to save model weights file", default="SavedModelWeights4")
+    parser.add_argument("--saveName", help="Name how to save model weights file", default="SMALL_SavedModelWeights4")
     parser.add_argument("--dataset_path", help="PATH to dataset location",
                         default="//media//cuda//HDD//Internship//Kruk//COCO//")
-    parser.add_argument("--tensorboard", help="Name how to save tensorboard logs", default="runs//yolov2_training4")
+    parser.add_argument("--tensorboard", help="Name how to save tensorboard logs", default="runs//SMALL_yolov2_training4")
     parser.add_argument("--img_size", help="Images will be scaled to img_size*img_size", default="416")
-    parser.add_argument("--batch", help="Batch size", default="32")
-    parser.add_argument("--num_classes", help="Int number of classes", default="95")
-    parser.add_argument("--epochs", help="Number of epochs to train", default="12")
+    parser.add_argument("--batch", help="Batch size", default="2")
+    parser.add_argument("--num_classes", help="Int number of classes", default="5")
+    parser.add_argument("--epochs", help="Number of epochs to train", default="7")
     parser.add_argument("--epoch_start",help="Number of epoch to continue to train",default="0")
     parser.add_argument("--cuda", help="Bool. Whether to train on CUDA or not", default="True")
     parser.add_argument("--continue_training",help="Whether to download weights and continue to train or start from the beginning",default="False")

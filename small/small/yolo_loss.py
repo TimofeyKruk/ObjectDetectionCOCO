@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import math
 
+## SMALL/SMALL
 
 class yoloLoss(nn.modules.loss._Loss):
     def __init__(self, num_classes,

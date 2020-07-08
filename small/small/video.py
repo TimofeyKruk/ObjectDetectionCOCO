@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+## SMALL/SMALL
+
 '''
 This file is responsible for online video analysis
 and drawing predictions on the video.

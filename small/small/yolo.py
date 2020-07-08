@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import yolo_loss
+## SMALL/SMALL
 
 
 def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=False, leaky_parameter=0.1,

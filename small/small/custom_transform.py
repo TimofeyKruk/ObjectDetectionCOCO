@@ -5,6 +5,8 @@ from PIL import Image
 from torchvision import transforms
 import matplotlib.pyplot as plt
 
+## SMALL/SMALL
+
 
 class Resize():
     def __init__(self, img_size) -> None:
@@ -29,6 +31,14 @@ class Resize():
             w_resized = annotation["bbox"][2] * width_ratio
             h_resized = annotation["bbox"][3] * height_ratio
             object_class = annotation["category_id"]
+
+            #Transforming to 1-5:
+            categoryId_change={1:0,
+                               3:1,
+                               16:2,
+                               17:3,
+                               18:4}
+            object_class=categoryId_change[object_class]
 
             boxes.append([x1_resized, y1_resized, w_resized, h_resized, object_class])
 
