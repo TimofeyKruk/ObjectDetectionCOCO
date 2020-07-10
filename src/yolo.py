@@ -105,7 +105,7 @@ class modelYOLO(nn.Module):
 
 
 # TODO: implement tensorboard and learning rate scheduler and save model
-def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.001, epoch_start=0, epochs=10,
+def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.0001, epoch_start=0, epochs=10,
                 cuda=True, save=True) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO

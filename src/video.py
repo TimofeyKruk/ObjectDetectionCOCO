@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 '''
 This file is responsible for online video analysis
@@ -16,12 +17,16 @@ def analyze_video(model):
 
     while cap.isOpened():
         ret, frame = cap.read()
+        frame = frame / 255
 
         cv2.rectangle(frame, (np.random.randint(30, 230), np.random.randint(30, 230)),
-                      (np.random.randint(30, 330), np.random.randint(30, 330)), (255, 120, 120), thickness=2)
+                      (np.random.randint(30, 330), np.random.randint(30, 330)), (1, 0, 0), thickness=2)
 
+        print(type(frame))
+        print(frame.shape)
         out.write(frame)
         cv2.imshow("frame", frame)
+
         # An exit from the infinitive loop
         if cv2.waitKey(50) & 0xFF == ord('q'):
             break

@@ -36,7 +36,6 @@ class Resize():
         toTensor = transforms.ToTensor()
         image = toTensor(image)
         boxes = np.array(boxes, dtype=np.float32)
-
         if len(boxes) != 0:
             temp = []
             for box in boxes:
