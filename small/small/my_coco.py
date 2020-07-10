@@ -4,6 +4,7 @@ import os
 import os.path
 import matplotlib.pyplot as plt
 
+
 class CocoCaptions(VisionDataset):
     """`MS Coco Captions <http://mscoco.org/dataset/#captions-challenge2015>`_ Dataset.
 
@@ -99,18 +100,18 @@ class CocoDetection(VisionDataset):
         self.coco = COCO(annFile)
         # @@ My code @@
         self.cat_ids = self.coco.getCatIds(catNms=["person", "car", "bird", "cat", "dog"])
-        print("self.cat_ids: ",self.cat_ids)
-        #self.ann_ids = self.coco.getAnnIds(catIds=self.cat_ids, iscrowd=None)
-        #Set
-        img_ids=set()
+        print("self.cat_ids: ", self.cat_ids)
+        # self.ann_ids = self.coco.getAnnIds(catIds=self.cat_ids, iscrowd=None)
+        # Set
+        img_ids = set()
         for cat_id in self.cat_ids:
             for im_id in self.coco.getImgIds(catIds=cat_id):
                 img_ids.add(im_id)
 
-        img_ids=list(img_ids)
-        print("self.img_ids: ",len(img_ids),img_ids)
-        #self.all_ann = self.coco.loadAnns(self.ann_ids)
-        #I have changed sorted() argument
+        img_ids = list(img_ids)
+        print("self.img_ids: len ", len(img_ids))
+        # self.all_ann = self.coco.loadAnns(self.ann_ids)
+        # I have changed sorted() argument
         self.ids = list(sorted(img_ids))
 
         print(max(self.ids))
@@ -125,9 +126,7 @@ class CocoDetection(VisionDataset):
         """
         coco = self.coco
         img_id = self.ids[index]
-        ann_ids = coco.getAnnIds(imgIds=img_id,catIds=self.cat_ids)
-
-        print(ann_ids)
+        ann_ids = coco.getAnnIds(imgIds=img_id, catIds=self.cat_ids)
 
         target = coco.loadAnns(ann_ids)
 
@@ -135,8 +134,8 @@ class CocoDetection(VisionDataset):
 
         img = Image.open(os.path.join(self.root, path)).convert('RGB')
 
-        plt.imshow(img)
-        plt.show()
+        # plt.imshow(img)
+        # plt.show()
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)

@@ -3,6 +3,8 @@ import yolo
 import data_preparation
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
+
 
 ## SMALL/SMALL
 
@@ -17,7 +19,7 @@ if __name__ == '__main__':
     PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\SavedModelWeights4_after7_after28"
     num_classes = 95
     batch_size = 4
-    img_size_transform = 32*13
+    img_size_transform = 32 * 13
 
     # Loading model from memory
     model = load_model(PATH, num_classes)
@@ -27,7 +29,7 @@ if __name__ == '__main__':
 
     for data in train:
         images, targets = data[0], data[1]
-        np_image=np.transpose(images.numpy()[3, :, :, :], (1, 2, 0))
+        np_image = np.transpose(images.numpy()[3, :, :, :], (1, 2, 0))
         plt.imshow(np_image)
         plt.show()
         with torch.no_grad():
