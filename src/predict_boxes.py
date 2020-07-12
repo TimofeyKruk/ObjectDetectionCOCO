@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yolo_loss
 import cv2
+import post_processing
 
 
 def draw_boxes(img, target):
@@ -30,41 +31,38 @@ def draw_boxes(img, target):
 def load_model(PATH, class_number=95):
     model = yolo.modelYOLO(num_classes=class_number)
     model.load_state_dict(torch.load(PATH))
+    print("Model was loaded from file: ", PATH)
     return model
 
 
 if __name__ == '__main__':
     print("Predicting object boxes started!")
-    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\SavedModelWeights4_after7_after28_after35"
+    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\SavedModelWeights5_after14_after28"
     num_classes = 95
-    batch_size = 2
+    batch_size =4
     img_size_transform = 32 * 13
 
     # Loading model from memory
     model = load_model(PATH, num_classes)
 
-    train = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform, train_bool=True,
+    train = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform,
+                                      train_bool=False,
                                       batch_size=batch_size)
 
     for data in train:
         images, targets = data[0], data[1]
-
-        np_image = np.transpose(images.numpy()[1, :, :, :], (1, 2, 0))
-
-        cv2.rectangle(np_image, (40, 40), (100, 100), (240, 130, 10), thickness=4)
-
-        plt.imshow(np_image)
-        plt.show()
-        plt.imshow(np.transpose(images.numpy()[0, :, :, :], (1, 2, 0)))
-        plt.show()
 
         with torch.no_grad():
             outputs = model(images)
             criterion = yolo_loss.yoloLoss(num_classes, device="cpu", cuda=False)
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
 
-        out = outputs[1].view(5, 100, 13, 13)
-        print("Outputs[1].view.shape", out.shape)
+        post_images = post_processing.draw_predictions(images, outputs)
+
+        for post_image in post_images:
+            #cv2.imshow("Post", post_image)
+            plt.imshow(post_image)
+            plt.show()
 
         # for i,anchor in enumerate(out):
         #     for position in range(196):
@@ -73,12 +71,14 @@ if __name__ == '__main__':
         #             print("max class in confident position: ",position, torch.max(anchor[5:,position],dim=0)[1])
         #     #print("Anchor: ",i,", Confidence: ",anchor[4],", class: ",max(anchor[5:]))
 
-        for i in range(13):
-            for j in range(13):
-                print("Position: i", i, " j", j)
-                for anchor in range(5):
-                    if out[anchor, 4, i, j].sigmoid() > 0.1:
-                        print("Anchor: ", anchor, ", confidence: ", out[anchor, 4, i, j].sigmoid(), ", class: ",
-                              torch.argmax(torch.softmax(out[anchor, 5:, i, j], dim=0)))
+        # out = outputs[1].view(5, 100, 13, 13)
+        # print("Outputs[1].view.shape", out.shape)
+        # for i in range(13):
+        #     for j in range(13):
+        #         print("Position: i", i, " j", j)
+        #         for anchor in range(5):
+        #             if out[anchor, 4, i, j].sigmoid() > 0.1:
+        #                 print("Anchor: ", anchor, ", confidence: ", out[anchor, 4, i, j].sigmoid(), ", class: ",
+        #                       torch.argmax(torch.softmax(out[anchor, 5:, i, j], dim=0)))
 
         break

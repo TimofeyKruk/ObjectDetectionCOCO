@@ -10,10 +10,10 @@ if __name__ == '__main__':
     print("CWD: ")
     print("__CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saveName", help="Name how to save model weights file", default="SavedModelWeights5")
+    parser.add_argument("--saveName", help="Name how to save model weights file", default="SavedModelWeights6")
     parser.add_argument("--dataset_path", help="PATH to dataset location",
                         default="//media//cuda//HDD//Internship//Kruk//COCO//")
-    parser.add_argument("--tensorboard", help="Name how to save tensorboard logs", default="yolov2_training5")
+    parser.add_argument("--tensorboard", help="Name how to save tensorboard logs", default="yolov2_training6")
     parser.add_argument("--img_size", help="Images will be scaled to img_size*img_size", default="416")
     parser.add_argument("--batch", help="Batch size", default="32")
     parser.add_argument("--num_classes", help="Int number of classes", default="95")
@@ -24,11 +24,13 @@ if __name__ == '__main__':
                         help="Whether to download weights and continue to train or start from the beginning",
                         default="False")
     parser.add_argument("--lr_start", help="Learning rate to start this training with", default="0.0001")
+    parser.add_argument("--save_every", help="Number of every epochs to save model weights", default="5")
     args = parser.parse_args()
 
     lr_start = float(args.lr_start)
     continue_training = True if args.continue_training == "True" else False
     epoch_start = int(args.epoch_start)
+    save_every = int(args.save_every)
 
     saveName = args.saveName
     print("__Name to save model: ", saveName)
@@ -66,7 +68,8 @@ if __name__ == '__main__':
                              lr_start=lr_start,
                              epoch_start=epoch_start,
                              epochs=epochs,
-                             save=True)
+                             save=True,
+                             save_every=save_every)
 
     # tensorboard.add_graph(model, torch.rand(batch_size, 3, img_size_transform, img_size_transform))
 

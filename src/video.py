@@ -17,7 +17,11 @@ def analyze_video(model):
 
     while cap.isOpened():
         ret, frame = cap.read()
-        frame = frame / 255
+
+        frame=frame/255
+
+        print(frame.max())
+        print(type(frame[100, 100, 0]))
 
         cv2.rectangle(frame, (np.random.randint(30, 230), np.random.randint(30, 230)),
                       (np.random.randint(30, 330), np.random.randint(30, 330)), (1, 0, 0), thickness=2)

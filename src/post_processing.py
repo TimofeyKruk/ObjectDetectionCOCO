@@ -1,29 +1,54 @@
 import cv2
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
 
 
-def draw_predictions(image, output, image_size=416):
-    predictions = post_processing(output, gt_classes=None,
+def draw_predictions(images, outputs, image_size=416):
+    predictions = post_processing(outputs, gt_classes=None,
                                   image_size=image_size,
-                                  confidence_threshold=0.2,
+                                  confidence_threshold=0.018,
                                   nms_threshold=0.6)
-    for prediction in predictions:
-        xmin = int(max(prediction[0], 0))
-        ymin = int(max(prediction[1], 0))
+    post_images = []
+    if len(predictions) != 0:
+        for i, image in enumerate(images):
+            print("NewImage")
+            image = (np.transpose(image.numpy(), (1, 2, 0)))
 
-        xmax = int(min(prediction[0] + prediction[2], image_size))
-        ymax = int(min(prediction[1] + prediction[3], image_size))
+            np_image = np.zeros(image.shape, np.float32)
+            np_image[5:-5, 5:-5, 0:3] = image[5:-5, 5:-5, 0:3]
 
-        cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (200, 200, 0), thickness=4)
+            if len(predictions[i]) != 0:
+                for prediction in predictions[i]:
+                    xmin = int(max(prediction[0], 0))
+                    ymin = int(max(prediction[1], 0))
 
-        text_size = cv2.getTextSize(prediction[5] + ":%.2f" % prediction[4], cv2.FONT_HERSHEY_PLAIN, fontScale=1, thickness=1)[0]
-        cv2.rectangle(image, (xmin, ymin), (xmin + text_size[0] + 3, ymin + text_size[1] + 4), (100, 100, 0), -1)
-        cv2.putText(image,
-                    prediction[5] + ":%.2f" % prediction[4],
-                    (xmin, ymin + text_size[1] + 4),
-                    cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
-        print("Object: {}, bounding box: ({},{}),({},{})".format(prediction[5],xmin,ymin,xmax,ymax))
-        return image
+                    xmax = int(min(prediction[0] + prediction[2], image_size))
+                    ymax = int(min(prediction[1] + prediction[3], image_size))
+                    print("Object: {}, bounding box: ({},{}),({},{})".format(prediction[5], xmin, ymin, xmax, ymax))
+
+                    cv2.rectangle(np_image,
+                                  (xmin, ymin),
+                                  (xmax, ymax),
+                                  (1, 0, 1), 2)
+
+                    text_size = cv2.getTextSize(str(prediction[5]) + ":%.2f" % prediction[4],
+                                                cv2.FONT_HERSHEY_PLAIN,
+                                                fontScale=1,
+                                                thickness=1)[0]
+                    cv2.rectangle(np_image,
+                                  (xmin, ymin),
+                                  (xmin + text_size[0] + 3, ymin + text_size[1] + 4),
+                                  (1, 0.5, 0.5),
+                                  -1)
+                    cv2.putText(np_image,
+                                str(prediction[5]) + ":%.2f" % prediction[4],
+                                (xmin, ymin + text_size[1] + 4),
+                                cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
+
+            post_images.append(np_image)
+
+    return post_images
 
 
 def post_processing(outputs,
@@ -34,7 +59,7 @@ def post_processing(outputs,
                              (5.05587, 8.09892),
                              (9.47112, 4.84053),
                              (11.2364, 10.0071)],
-                    confidence_threshold=0.25,
+                    confidence_threshold=0.018,
                     nms_threshold=0.6):
     """
     Creating array of boxes. Where one box stands for one prediction with object coordinates,
@@ -85,7 +110,7 @@ def post_processing(outputs,
     # Sigmoid(t)=probability*confidence(iou)
     classes_max.mul_(outputs[:, :, 4, :])
 
-    score_thresholded_mask = (classes_max > confidence_threshold).view(-1)
+    score_thresholded_mask = (classes_max > confidence_threshold)
 
     predicted_boxes = []
     if score_thresholded_mask.sum() == 0:
@@ -102,7 +127,9 @@ def post_processing(outputs,
 
         cells_per_batch = num_anchors * height * width
         slices = [slice(cells_per_batch * i, cells_per_batch * (i + 1)) for i in range(batch_size)]
-        detections_per_batch = torch.IntTensor([score_thresholded_mask[s].int().sum() for s in slices])
+
+        score_thresholded_mask_flattened = score_thresholded_mask.view(-1)
+        detections_per_batch = torch.IntTensor([score_thresholded_mask_flattened[s].int().sum() for s in slices])
         split_indexes = torch.cumsum(detections_per_batch, dim=0)
 
         # Grouping detections of one image in a batch
@@ -115,7 +142,8 @@ def post_processing(outputs,
     selected_boxes = []
     for boxes in predicted_boxes:
         if boxes.numel() == 0:
-            return boxes
+            selected_boxes.append([])
+            continue
 
         points = boxes[:, 0:2]
         edges = boxes[:, 2:4]
@@ -142,29 +170,29 @@ def post_processing(outputs,
 
         keeping_boxes = conflicting_boxes_mask.sum(dim=0)
 
-        len_keeping = len(keeping_boxes) - 1
-        for i in range(1, len_keeping):
-            if keeping_boxes[i] > 0:
-                keeping_boxes -= conflicting_boxes_mask[i]
+        # len_keeping = len(keeping_boxes) - 1
+        # for i in range(1, len_keeping):
+        #     if keeping_boxes[i] > 0:
+        #         keeping_boxes -= [int(element) for element in conflicting_boxes_mask[i]]
 
         keeping_boxes = (keeping_boxes == 0)
         selected_boxes.append(boxes[order][keeping_boxes[:, None].expand_as(boxes)].view(-1, 6).contiguous())
 
-        # Scaling boxes according to image
-        final_boxes = []
-        for boxes in selected_boxes:
-            if boxes.dim() == 0:
-                final_boxes.append([])
-            else:
-                boxes[:, 0:4] *= image_size
-                boxes[:, 0] -= boxes[:, 2] / 2
-                boxes[:, 1] -= boxes[:, 3] / 2
+    # Scaling boxes according to image
+    final_boxes = []
+    for boxes in selected_boxes:
+        if len(boxes) == 0:
+            final_boxes.append([])
+        else:
+            boxes[:, 0:4] *= image_size
+            boxes[:, 0] -= boxes[:, 2] / 2
+            boxes[:, 1] -= boxes[:, 3] / 2
 
-                final_boxes.append([[box[0].item(),
-                                     box[1].item(),
-                                     box[2].item(),
-                                     box[3].item(),
-                                     box[4].item(),
-                                     box[5].item()] for box in boxes])
+            final_boxes.append([[box[0].item(),
+                                 box[1].item(),
+                                 box[2].item(),
+                                 box[3].item(),
+                                 box[4].item(),
+                                 int(box[5].item())] for box in boxes])
 
-        return final_boxes
+    return final_boxes

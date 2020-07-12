@@ -106,7 +106,7 @@ class modelYOLO(nn.Module):
 
 # TODO: implement tensorboard and learning rate scheduler and save model
 def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.0001, epoch_start=0, epochs=10,
-                cuda=True, save=True) -> modelYOLO:
+                cuda=True, save=True, save_every=5) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
     :param train: train_loader <- data to train the model
@@ -130,7 +130,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[6, 15, 22], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[14, 21], gamma=0.1)
 
     for name, param in model.named_parameters():
         if param.device.type != 'cuda':
@@ -182,7 +182,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
         print("Last used LR: ", scheduler.get_last_lr())
         scheduler.step()
 
-        if save is True and (epoch + 1) % 7 == 0:
+        if save is True and (epoch + 1) % save_every == 0:
             torch.save(model.state_dict(), saveName + "_after{}".format(str(epoch + 1)))
             print("Model was saved at file:", saveName + "_after{}".format(str(epoch + 1)))
 
