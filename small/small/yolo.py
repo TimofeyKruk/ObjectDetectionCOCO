@@ -133,7 +133,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[1, 8, 15, 22], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 21], gamma=0.1)
 
     for name, param in model.named_parameters():
         if param.device.type != 'cuda':
@@ -171,11 +171,11 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
             running_classes += loss_classes.item()
 
             if (i + 1) % 25 == 0:
-                tensorboard.add_scalar("Total loss (train)", running_total / 25, (epoch * 2587 + i + 1) // 25)
+                tensorboard.add_scalar("Total loss (train)", running_total / 25, (epoch * 1660 + i + 1) // 25)
                 tensorboard.add_scalar("Coordinates loss (train)", running_coordinates / 25,
-                                       (epoch * 2587 + i + 1) // 25)
-                tensorboard.add_scalar("Confidence loss (train)", running_confidence / 25, (epoch * 2587 + i + 1) // 25)
-                tensorboard.add_scalar("Classes loss (train)", running_classes / 25, (epoch * 2587 + i + 1) // 25)
+                                       (epoch * 1660 + i + 1) // 25)
+                tensorboard.add_scalar("Confidence loss (train)", running_confidence / 25, (epoch * 1660 + i + 1) // 25)
+                tensorboard.add_scalar("Classes loss (train)", running_classes / 25, (epoch * 1660 + i + 1) // 25)
                 print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_total / 25)
                 running_total = 0.0
                 running_coordinates = 0.0

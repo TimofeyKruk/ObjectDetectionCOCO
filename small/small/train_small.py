@@ -19,11 +19,11 @@ if __name__ == '__main__':
     print("CWD: ")
     print("__CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saveName", help="Name how to save model weights file", default="SMALL_SavedModelWeights4")
+    parser.add_argument("--saveName", help="Name how to save model weights file", default="SMALL_SavedModelWeights5")
     parser.add_argument("--dataset_path", help="PATH to dataset location",
                         default="//media//cuda//HDD//Internship//Kruk//COCO//")
     parser.add_argument("--tensorboard", help="Name how to save tensorboard logs",
-                        default="runs//SMALL_yolov2_training4")
+                        default="runs//SMALL_yolov2_training5")
     parser.add_argument("--img_size", help="Images will be scaled to img_size*img_size", default="416")
     parser.add_argument("--batch", help="Batch size", default="32")
     parser.add_argument("--num_classes", help="Int number of classes", default="5")

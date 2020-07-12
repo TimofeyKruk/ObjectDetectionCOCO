@@ -15,7 +15,7 @@ class Resize():
         self.img_size = img_size
 
     def __call__(self, image, target):
-        height, width = image.size
+        width, height = image.size
         # Resizing image to img_size:
         image = image.resize((self.img_size, self.img_size), resample=Image.NEAREST)
 

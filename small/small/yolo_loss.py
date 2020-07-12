@@ -17,7 +17,7 @@ class yoloLoss(nn.modules.loss._Loss):
                  cuda=True,
                  coord_scale=0.1,
                  noobject_scale=1.0,
-                 object_scale=0.5,
+                 object_scale=5.0,
                  class_scale=1.0,
                  threshold=0.6) -> None:
         super().__init__()
@@ -32,6 +32,7 @@ class yoloLoss(nn.modules.loss._Loss):
         self.coord_scale = coord_scale
         self.noobject_scale = noobject_scale
         self.object_scale = object_scale
+        print("____Object scale in loss: ", self.object_scale)
         self.class_scale = class_scale
         self.threshold = threshold
 
@@ -97,7 +98,7 @@ class yoloLoss(nn.modules.loss._Loss):
         classes = classes[classes_mask].view(-1, self.num_classes)
 
         # Losses
-        lossMSE = nn.MSELoss()
+        lossMSE = nn.MSELoss(reduction="sum")
         lossCE = nn.CrossEntropyLoss()
         # print("Variable {} is on device: {}".format("coordinates_mask", coordinates_mask.device.type))
         # print("Variable {} is on device: {}".format("coordinates", coordinates.device.type))
