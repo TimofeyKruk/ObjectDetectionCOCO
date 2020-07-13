@@ -4,11 +4,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def draw_gt_boxes(images, targets):
+    gt_images = []
+    for i, image in enumerate(images):
+        height, width = image.shape[:2]
+        for object in targets[i]:
+            x1 = int(max(object[0], 0))
+            y1 = int(max(object[1], 0))
+            x2 = int(min(object[0] + object[2], width))
+            y2 = int(min(object[1] + object[3], height))
+
+            cv2.rectangle(image, (x1, y1), (x2, y2), color=(1, 0.5, 0), thickness=2)
+            print("___GT___Object : ", object[4].item(), ", coordinates: ", x1, " ", y1, " ", x2, " ", y2)
+            # text_size = cv2.getTextSize(str(object[4]) + ": gt_pr=1.0",
+            #                             cv2.FONT_HERSHEY_PLAIN,
+            #                             fontScale=1,
+            #                             thickness=1)[0]
+            # cv2.rectangle(image,
+            #               (x1, y1),
+            #               (x1 + text_size[0] + 3, y1 + text_size[1] + 4),
+            #               (1, 0.5, 0.5),
+            #               -1)
+            # cv2.putText(image,
+            #             str(object[4]) + ": gt_pr=1.0",
+            #             (x1, y1 + text_size[1] + 4),
+            #             cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
+        gt_images.append(image)
+    return gt_images
+
+
 def draw_predictions(images, outputs, image_size=416):
-    predictions = post_processing(outputs, gt_classes=None,
+    predictions = post_processing(outputs, gt_classes_dict=None,
                                   image_size=image_size,
-                                  confidence_threshold=0.018,
-                                  nms_threshold=0.6)
+                                  confidence_threshold=0.20,
+                                  nms_threshold=0.5)
     post_images = []
     if len(predictions) != 0:
         for i, image in enumerate(images):
@@ -16,7 +45,7 @@ def draw_predictions(images, outputs, image_size=416):
             image = (np.transpose(image.numpy(), (1, 2, 0)))
 
             np_image = np.zeros(image.shape, np.float32)
-            np_image[5:-5, 5:-5, 0:3] = image[5:-5, 5:-5, 0:3]
+            np_image[2:-2, 2:-2, 0:3] = image[2:-2, 2:-2, 0:3]
 
             if len(predictions[i]) != 0:
                 for prediction in predictions[i]:
@@ -30,7 +59,7 @@ def draw_predictions(images, outputs, image_size=416):
                     cv2.rectangle(np_image,
                                   (xmin, ymin),
                                   (xmax, ymax),
-                                  (1, 0, 1), 2)
+                                  (0.2, 0.7, 0.5), 2)
 
                     text_size = cv2.getTextSize(str(prediction[5]) + ":%.2f" % prediction[4],
                                                 cv2.FONT_HERSHEY_PLAIN,
@@ -39,7 +68,7 @@ def draw_predictions(images, outputs, image_size=416):
                     cv2.rectangle(np_image,
                                   (xmin, ymin),
                                   (xmin + text_size[0] + 3, ymin + text_size[1] + 4),
-                                  (1, 0.5, 0.5),
+                                  (0.2, 0.7, 0.5),
                                   -1)
                     cv2.putText(np_image,
                                 str(prediction[5]) + ":%.2f" % prediction[4],
@@ -52,15 +81,15 @@ def draw_predictions(images, outputs, image_size=416):
 
 
 def post_processing(outputs,
-                    gt_classes,
+                    gt_classes_dict=None,
                     image_size=416,
                     anchors=[(1.3221, 1.73145),
                              (3.19275, 4.00944),
                              (5.05587, 8.09892),
                              (9.47112, 4.84053),
                              (11.2364, 10.0071)],
-                    confidence_threshold=0.018,
-                    nms_threshold=0.6):
+                    confidence_threshold=0.2,
+                    nms_threshold=0.5):
     """
     Creating array of boxes. Where one box stands for one prediction with object coordinates,
     object class, confidence score. Representation of model output.
@@ -138,6 +167,10 @@ def post_processing(outputs,
             predicted_boxes.append(detections[start:end])
             start = end
 
+    temp_total = 0
+    for boxes in predicted_boxes:
+        temp_total += len(boxes)
+    print("Amount of predictions before nms: ", temp_total)
     # ____Non-max suppression____
     selected_boxes = []
     for boxes in predicted_boxes:
@@ -177,6 +210,11 @@ def post_processing(outputs,
 
         keeping_boxes = (keeping_boxes == 0)
         selected_boxes.append(boxes[order][keeping_boxes[:, None].expand_as(boxes)].view(-1, 6).contiguous())
+
+    temp_total = 0
+    for boxes in selected_boxes:
+        temp_total += len(boxes)
+    print("Amount of predictions after nms: ", temp_total)
 
     # Scaling boxes according to image
     final_boxes = []
