@@ -30,7 +30,7 @@ def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32):
     # PATH = "F:\WORK_Oxagile\INTERN\Datasets\COCO\\"
 
     if train_bool is True:
-        train = my_coco.CocoDetection(root=PATH + "images//train2014",
+        train = my_coco.CocoDetection(root=PATH + "images//train2014//train2014",
                                       annFile=PATH + "annotations//annotations_trainval2014//annotations//instances_train2014.json",
                                       transforms=Resize(img_size=img_size))
         print("___DataLoader started! Batch size: ", batch_size)
