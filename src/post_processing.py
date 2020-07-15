@@ -14,7 +14,7 @@ def draw_gt_boxes(images, targets):
             x2 = int(min(object[0] + object[2], width))
             y2 = int(min(object[1] + object[3], height))
 
-            cv2.rectangle(image, (x1, y1), (x2, y2), color=(1, 0.5, 0), thickness=2)
+            cv2.rectangle(image, (x1, y1), (x2, y2), color=(1, 0.43, 0), thickness=2)
             print("___GT___Object : ", object[4].item(), ", coordinates: ", x1, " ", y1, " ", x2, " ", y2)
             # text_size = cv2.getTextSize(str(object[4]) + ": gt_pr=1.0",
             #                             cv2.FONT_HERSHEY_PLAIN,
@@ -33,17 +33,18 @@ def draw_gt_boxes(images, targets):
     return gt_images
 
 
-def draw_predictions(images, outputs, image_size=416):
-    predictions = post_processing(outputs, gt_classes_dict=None,
+def draw_predictions(images, outputs, gt_classes_dict=None, color_dict=None, image_size=416):
+    predictions = post_processing(outputs,
                                   image_size=image_size,
                                   confidence_threshold=0.20,
-                                  nms_threshold=0.5)
+                                  nms_threshold=0.6)
     post_images = []
     if len(predictions) != 0:
         for i, image in enumerate(images):
             print("NewImage")
             image = (np.transpose(image.numpy(), (1, 2, 0)))
 
+            # TODO: Bug that better be fixed. Don't know how to fix it.
             np_image = np.zeros(image.shape, np.float32)
             np_image[2:-2, 2:-2, 0:3] = image[2:-2, 2:-2, 0:3]
 
@@ -56,24 +57,31 @@ def draw_predictions(images, outputs, image_size=416):
                     ymax = int(min(prediction[1] + prediction[3], image_size))
                     print("Object: {}, bounding box: ({},{}),({},{})".format(prediction[5], xmin, ymin, xmax, ymax))
 
+                    if color_dict is not None:
+                        color = color_dict[prediction[5]]
+                    else:
+                        color = (0.2, 0.7, 0.5)
+
                     cv2.rectangle(np_image,
                                   (xmin, ymin),
                                   (xmax, ymax),
-                                  (0.2, 0.7, 0.5), 2)
+                                  color, 2)
 
-                    text_size = cv2.getTextSize(str(prediction[5]) + ":%.2f" % prediction[4],
+                    text = (gt_classes_dict[prediction[5]] if gt_classes_dict != None else str(
+                        prediction[5])) + ":%.2f" % prediction[4]
+                    text_size = cv2.getTextSize(text,
                                                 cv2.FONT_HERSHEY_PLAIN,
                                                 fontScale=1,
                                                 thickness=1)[0]
                     cv2.rectangle(np_image,
                                   (xmin, ymin),
                                   (xmin + text_size[0] + 3, ymin + text_size[1] + 4),
-                                  (0.2, 0.7, 0.5),
+                                  color,
                                   -1)
                     cv2.putText(np_image,
-                                str(prediction[5]) + ":%.2f" % prediction[4],
+                                text,
                                 (xmin, ymin + text_size[1] + 4),
-                                cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
+                                cv2.FONT_HERSHEY_PLAIN, 1, (1, 1, 1), 1)
 
             post_images.append(np_image)
 
@@ -81,7 +89,6 @@ def draw_predictions(images, outputs, image_size=416):
 
 
 def post_processing(outputs,
-                    gt_classes_dict=None,
                     image_size=416,
                     anchors=[(1.3221, 1.73145),
                              (3.19275, 4.00944),
@@ -89,7 +96,7 @@ def post_processing(outputs,
                              (9.47112, 4.84053),
                              (11.2364, 10.0071)],
                     confidence_threshold=0.2,
-                    nms_threshold=0.5):
+                    nms_threshold=0.6):
     """
     Creating array of boxes. Where one box stands for one prediction with object coordinates,
     object class, confidence score. Representation of model output.

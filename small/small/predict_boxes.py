@@ -8,7 +8,7 @@ import cv2
 from src import post_processing
 
 
-#___SMALL___
+# ___SMALL___
 def load_model(PATH, class_number=95):
     model = yolo.modelYOLO(num_classes=class_number)
     model.load_state_dict(torch.load(PATH))
@@ -18,7 +18,8 @@ def load_model(PATH, class_number=95):
 
 if __name__ == '__main__':
     print("Predicting object boxes started!__SMALL__")
-    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights6_after15_after20"
+    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights6_after15_after20_after30"
+    print("Model PATH: ", PATH)
     num_classes = 5
     batch_size = 2
     img_size_transform = 32 * 13
@@ -27,10 +28,10 @@ if __name__ == '__main__':
     model = load_model(PATH, num_classes)
 
     dataset = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform,
-                                        train_bool=True,
+                                        train_bool=False,
                                         batch_size=batch_size)
 
-    for data in dataset:
+    for i, data in enumerate(dataset):
         images, targets = data[0], data[1]
 
         with torch.no_grad():
@@ -38,13 +39,26 @@ if __name__ == '__main__':
             criterion = yolo_loss.yoloLoss(num_classes, device="cpu", cuda=False)
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
 
-        post_images = post_processing.draw_predictions(images, outputs)
+        gt_dict = {0: "Person",
+                   1: "Car",
+                   2: "Bird",
+                   3: "Cat",
+                   4: "Dog"}
+        color_dict = {0: (0.3, 0.7, 0.7),
+                      1: (0.6, 0.2, 0.3),
+                      2: (0.3, 0.3, 0.5),
+                      3: (0.5, 0.5, 0.2),
+                      4: (0.1, 0.7, 0.1)}
+        post_images = post_processing.draw_predictions(images, outputs, gt_classes_dict=gt_dict, color_dict=color_dict)
 
         if len(targets) != 0:
             post_images = post_processing.draw_gt_boxes(post_images, targets)
 
-        for post_image in post_images:
+        for j, post_image in enumerate(post_images):
             # cv2.imshow("Post", post_image)
+            cv2.imwrite("predicted_after30//00_no_person_rgb_" + str(i) + "_" + str(j) + ".jpg",
+                        cv2.cvtColor(post_image * 255, cv2.COLOR_RGB2BGR))
+
             plt.imshow(post_image)
             plt.show()
 
@@ -58,4 +72,5 @@ if __name__ == '__main__':
         #                 print("Anchor: ", anchor, ", confidence: ", out[anchor, 4, i, j].sigmoid(), ", class: ",
         #                       torch.argmax(torch.softmax(out[anchor, 5:, i, j], dim=0)))
 
-        break
+        if i >= 20:
+            break

@@ -114,8 +114,6 @@ class CocoDetection(VisionDataset):
         # I have changed sorted() argument
         self.ids = list(sorted(img_ids))
 
-        print(max(self.ids))
-
     def __getitem__(self, index):
         """
         Args:
@@ -133,9 +131,6 @@ class CocoDetection(VisionDataset):
         path = coco.loadImgs(img_id)[0]['file_name']
 
         img = Image.open(os.path.join(self.root, path)).convert('RGB')
-
-        # plt.imshow(img)
-        # plt.show()
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)
