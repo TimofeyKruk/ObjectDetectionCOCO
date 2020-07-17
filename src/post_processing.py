@@ -33,11 +33,13 @@ def draw_gt_boxes(images, targets):
     return gt_images
 
 
-def draw_predictions(images, outputs, gt_classes_dict=None, color_dict=None, image_size=416):
+def draw_predictions(images, outputs, gt_classes_dict=None, color_dict=None, image_size=416,
+                     confidence_threshold=0.2,
+                     nms_threshold=0.6):
     predictions = post_processing(outputs,
                                   image_size=image_size,
-                                  confidence_threshold=0.20,
-                                  nms_threshold=0.6)
+                                  confidence_threshold=confidence_threshold,
+                                  nms_threshold=nms_threshold)
     post_images = []
     if len(predictions) != 0:
         for i, image in enumerate(images):
@@ -140,7 +142,14 @@ def post_processing(outputs,
     with torch.no_grad():
         classes_scores = torch.nn.functional.softmax(outputs[:, :, 5:, :], dim=2)
 
+    #TODO: DELEEETEEEE!!! Deleting (setting to zero) predictions about person as far as they are to big right now
+    #classes_scores[:,:,0,:]=0
+
     classes_max, classes_max_idx = torch.max(classes_scores, dim=2)
+    # TODO: Debugging for dog and cats. Delete!
+    dog_conf = classes_scores[:, :, 4, :]
+    cat_conf = classes_scores[:, :, 3, :]
+
     classes_max_idx = classes_max_idx.float()
 
     # Sigmoid(t)=probability*confidence(iou)

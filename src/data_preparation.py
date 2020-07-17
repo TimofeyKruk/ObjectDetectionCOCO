@@ -39,8 +39,8 @@ def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32):
                                         num_workers=2)
         return train_l
     else:
-        test = torchvision.datasets.CocoDetection(root=PATH + "images//test2014//test2014",
-                                                  annFile=PATH + "annotations//image_info_test2014//annotations//image_info_test2014.json",
+        test = torchvision.datasets.CocoDetection(root=PATH + "images//val2014//val2014",
+                                                  annFile=PATH + "//annotations//annotations_trainval2014//annotations//instances_val2014.json",
                                                   transforms=Resize(img_size=img_size))
         print("___DataLoader started!")
         test_l = dataloader.DataLoader(test,

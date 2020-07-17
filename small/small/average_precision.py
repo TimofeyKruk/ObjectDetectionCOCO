@@ -18,10 +18,12 @@ def load_model(PATH, class_number):
 
 def evaluate_mAP(gt_json_file, predicted_json_file, annType="bbox"):
     cocoGt = COCO(gt_json_file)
+    print(cocoGt.info())
     cocoDt = cocoGt.loadRes(predicted_json_file)
     image_ids, cat_ids = get_img_cat_ids(gt_json_file)
+    print("image ids (evaluate_mAP) len: ", len(image_ids))
 
-    cocoEval = COCOeval(cocoGt=cocoGt, cocoDt=cocoDt, annType=annType)
+    cocoEval = COCOeval(cocoGt=cocoGt, cocoDt=cocoDt, iouType=annType)
     cocoEval.params.imgIds = image_ids
     cocoEval.params.catIds = cat_ids
 
@@ -76,8 +78,11 @@ def prepare_json_predictions(modelPATH, annFile, jsonName, num_classes, image_si
     data_json = []
 
     for b, data in enumerate(dataset):
+        if b % 5 == 0:
+            print(b)
         images, targets = data[0], data[1]
-        outputs = model(images)
+        with torch.no_grad():
+            outputs = model(images)
 
         predictions = post_processing(outputs=outputs,
                                       image_size=image_size,
@@ -118,9 +123,12 @@ if __name__ == '__main__':
     gt_json_file = path + "Datasets\COCO//annotations//annotations_trainval2014//annotations//instances_val2014.json"
 
     jsonName = "SMALL_predicted_after20"
-    prepare_json_predictions(modelPATH=modelPATH,
-                             annFile=gt_json_file,
-                             jsonName=jsonName,
-                             num_classes=num_classes,
-                             image_size=image_size,
-                             batch_size=batch_size)
+
+    # prepare_json_predictions(modelPATH=modelPATH,
+    #                          annFile=gt_json_file,
+    #                          jsonName=jsonName,
+    #                          num_classes=num_classes,
+    #                          image_size=image_size,
+    #                          batch_size=batch_size)
+    mAP = evaluate_mAP(gt_json_file,
+                       jsonName + ".json")

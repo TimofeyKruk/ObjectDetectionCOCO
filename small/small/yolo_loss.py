@@ -15,7 +15,7 @@ class yoloLoss(nn.modules.loss._Loss):
                           (11.2364, 10.0071)],
                  cell_size=32,
                  cuda=True,
-                 coord_scale=0.1,
+                 coord_scale=1.0,
                  noobject_scale=1.0,
                  object_scale=5.0,
                  class_scale=1.0,
@@ -80,9 +80,6 @@ class yoloLoss(nn.modules.loss._Loss):
         predicted_boxes[:, 2] = (coordinates[:, :, 2].exp() * anchor_width).view(-1)
         predicted_boxes[:, 3] = (coordinates[:, :, 3].exp() * anchor_height).view(-1)
 
-        # TODO: Maybe this line must be here
-        # predicted_boxes = predicted_boxes.cpu()
-
         # Receiving target values
         coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes = self.build_targets(
             predicted_boxes, target, height, width)
@@ -94,7 +91,6 @@ class yoloLoss(nn.modules.loss._Loss):
         classes_mask = classes_mask.view(-1, 1).repeat(1, self.num_classes)
 
         confidence_mask = confidence_mask.sqrt()
-        # TODO: I've deleted clsasses[classes_mask].view...
         classes = classes[classes_mask].view(-1, self.num_classes)
 
         # Losses
@@ -183,10 +179,9 @@ class yoloLoss(nn.modules.loss._Loss):
             # print("Predicted boxes shape ", predicted_boxes.shape)
             temp_mask = (iou_gt_predicted > self.threshold).sum(0) >= 1
             # print("Temp mask shape ", temp_mask.shape, temp_mask)
-            # TODO: Why is there not a 1?
             confidence_mask[instance][temp_mask.view_as(confidence_mask[instance])] = 0
 
-            # Searching for the best anchor for each groung truth box
+            # Searching for the best anchor for each ground truth box
             gt_hw_boxes = gt_boxes.clone().detach()
             gt_hw_boxes[:, :2] = 0
             iou_hwgt_anchors = boxes_iou(gt_hw_boxes, extended_anchors, self.device)
@@ -203,7 +198,12 @@ class yoloLoss(nn.modules.loss._Loss):
                     print("ERRROR!!!!!! IOU < 0 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
                 coordinates_mask[instance][best_anchor][0][gj * width + gi] = 1
                 classes_mask[instance][best_anchor][gj * width + gi] = 1
+
                 confidence_mask[instance][best_anchor][gj * width + gi] = self.object_scale
+                # TODO: I have created part of extra punishment for cat, dogs, birds, cars
+                if int(annotation[4]) != 0:
+                    extra_punishment = 0
+                    confidence_mask[instance][best_anchor][gj * width + gi] += extra_punishment
 
                 t_coord[instance][best_anchor][0][gj * width + gi] = gt_boxes[i, 0] - gi
                 t_coord[instance][best_anchor][1][gj * width + gi] = gt_boxes[i, 1] - gj

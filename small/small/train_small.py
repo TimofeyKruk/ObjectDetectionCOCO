@@ -19,11 +19,11 @@ if __name__ == '__main__':
     print("CWD: ")
     print("__CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saveName", help="Name how to save model weights file", default="SMALL_SavedModelWeights5")
+    parser.add_argument("--saveName", help="Name how to save model weights file", default="SMALL_SavedModelWeights7")
     parser.add_argument("--dataset_path", help="PATH to dataset location",
                         default="//media//cuda//HDD//Internship//Kruk//COCO//")
     parser.add_argument("--tensorboard", help="Name how to save tensorboard logs",
-                        default="runs//SMALL_yolov2_training5")
+                        default="SMALL_yolov2_training7")
     parser.add_argument("--img_size", help="Images will be scaled to img_size*img_size", default="416")
     parser.add_argument("--batch", help="Batch size", default="32")
     parser.add_argument("--num_classes", help="Int number of classes", default="5")
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument("--continue_training",
                         help="Whether to download weights and continue to train or start from the beginning",
                         default="False")
-    parser.add_argument("--lr_start", help="Learning rate to start this training with", default="0.0001")
+    parser.add_argument("--lr_start", help="Learning rate to start this training with", default="0.00001")
     parser.add_argument("--save_every", help="Number of every epochs to save model weights", default="7")
 
     args = parser.parse_args()
@@ -54,10 +54,6 @@ if __name__ == '__main__':
     cuda = args.cuda
     cuda = False if cuda == "False" else True
 
-    print("___Train dataloader started!")
-    train = data_preparation.loadCOCO(datasetPATH, img_size_transform, train_bool=True, batch_size=batch_size)
-    # test = data_preparation.loadCOCO(img_size_transform, train_bool=False, batch_size=batch_size)
-
     model = yolo.modelYOLO(num_classes=num_classes)
 
     if continue_training is True:
@@ -68,6 +64,12 @@ if __name__ == '__main__':
     tensorboard = SummaryWriter(tensorboard_name)
 
     print("___Training started:")
+    tensorboard.add_graph(model, torch.rand(batch_size, 3, img_size_transform, img_size_transform))
+
+    print("___Train dataloader started!")
+    train = data_preparation.loadCOCO(datasetPATH, img_size_transform, train_bool=True, batch_size=batch_size)
+    # test = data_preparation.loadCOCO(img_size_transform, train_bool=False, batch_size=batch_size)
+
     model = yolo.train_model(model,
                              train,
                              None,
@@ -81,7 +83,6 @@ if __name__ == '__main__':
                              save=True,
                              save_every=save_every)
 
-    # tensorboard.add_graph(model, torch.rand(batch_size, 3, img_size_transform, img_size_transform))
 
     print("___Model trained!!!")
     # tensorboard.add_graph(model, train[0][0])
