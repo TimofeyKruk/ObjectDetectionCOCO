@@ -6,6 +6,7 @@ import yolo_loss
 import cv2
 from src import post_processing
 
+
 def load_model(PATH, class_number=95):
     model = yolo.modelYOLO(num_classes=class_number)
     model.load_state_dict(torch.load(PATH))
@@ -35,8 +36,6 @@ if __name__ == '__main__':
             outputs = model(images)
             criterion = yolo_loss.yoloLoss(num_classes, device="cpu", cuda=False)
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
-
-
 
         conf = 0.010
         nms = 0.5

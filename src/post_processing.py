@@ -142,8 +142,8 @@ def post_processing(outputs,
     with torch.no_grad():
         classes_scores = torch.nn.functional.softmax(outputs[:, :, 5:, :], dim=2)
 
-    #TODO: DELEEETEEEE!!! Deleting (setting to zero) predictions about person as far as they are to big right now
-    #classes_scores[:,:,0,:]=0
+    # TODO: DELEEETEEEE!!! Deleting (setting to zero) predictions about person as far as they are to big right now
+    # classes_scores[:,:,0,:]=0
 
     classes_max, classes_max_idx = torch.max(classes_scores, dim=2)
     # TODO: Debugging for dog and cats. Delete!

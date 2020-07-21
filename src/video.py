@@ -18,7 +18,7 @@ def analyze_video(model):
     while cap.isOpened():
         ret, frame = cap.read()
 
-        frame=frame/255
+        frame = frame / 255
 
         print(frame.max())
         print(type(frame[100, 100, 0]))
