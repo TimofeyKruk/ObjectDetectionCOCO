@@ -143,7 +143,7 @@ class modelYOLO(nn.Module):
 
 
 def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.0001, epoch_start=0, epochs=10,
-                cuda=True, save=True, save_every=7) -> modelYOLO:
+                cuda=True, save=True, save_every=5) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
     :param train: train_loader <- data to train the model
@@ -156,7 +156,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
     '''
 
     if cuda is True and torch.cuda.is_available() is True:
-        device = torch.device("cuda:0")
+        device = torch.device("cuda")
     else:
         device = torch.device("cpu")
     model.to(device)
@@ -173,16 +173,20 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
     log_size = 25
 
     for epoch in range(epoch_start, epoch_start + epochs):
-        model.train()
         running_total = 0.0
         running_coordinates = 0.0
         running_confidence = 0.0
         running_classes = 0.0
-        print("Epoch: ", epoch)
 
-        for i, (images, targets) in enumerate(train):
-            images = images.to(device)
-            targets = [label.to(device) for label in targets]
+        print("Epoch: ", epoch)
+        model.train()
+
+        for i, data in enumerate(train):
+            if torch.cuda.is_available() and cuda:
+                images = data[0].to(device)
+                targets = [label.to(device) for label in data[1]]
+            else:
+                images, targets = data[0], data[1]
 
             optimizer.zero_grad()
 
@@ -191,14 +195,15 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
 
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
 
-            loss_total.backward()
-
-            optimizer.step()
-
             running_total += loss_total.item()
             running_coordinates += loss_coordinates.item()
             running_confidence += loss_confidence.item()
             running_classes += loss_classes.item()
+            print(running_total)
+
+            loss_total.backward()
+
+            optimizer.step()
 
             max_batch_number = max(max_batch_number, i)
             if (i + 1) % log_size == 0:
@@ -217,33 +222,36 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
                 running_classes = 0.0
 
         print("Last used LR: ", scheduler.get_last_lr())
-        tensorboard.add_scalar("Learning rate (per epoch)", scheduler.get_last_lr(), epoch)
+        tensorboard.add_scalar("Learning rate (per epoch)", scheduler.get_last_lr()[0], epoch)
         scheduler.step()
 
         # VALIDATION LOSS
         print("Validation loss calculating started!")
-        model.eval()
         max_val_batch = 0
+        model.eval()
         with torch.no_grad():
-            for i, (images, targets) in enumerate(test):
+            for i, (images, ground_boxes) in enumerate(test):
                 val_total = 0.0
                 val_coordinates = 0.0
                 val_confidence = 0.0
                 val_classes = 0.0
                 max_val_batch = max(max_val_batch, i)
 
+                images = images.to(device)
+                ground_boxes = [box.to(device) for box in ground_boxes]
+
                 outputs = model(images)
-                loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
+                loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, ground_boxes)
 
                 val_total += loss_total.item()
                 val_coordinates += loss_coordinates.item()
                 val_confidence += loss_confidence.item()
                 val_classes += loss_classes.item()
 
-        tensorboard.add_scalar("Total loss  (VAL)", val_total/max_val_batch, epoch)
-        tensorboard.add_scalar("Coordinates loss  (VAL)", val_coordinates/max_val_batch, epoch)
-        tensorboard.add_scalar("Confidence loss  (VAL)", val_confidence/max_val_batch, epoch)
-        tensorboard.add_scalar("Classes loss  (VAL)", val_classes/max_val_batch, epoch)
+        tensorboard.add_scalar("Total loss  (VAL)", val_total / max_val_batch, epoch)
+        tensorboard.add_scalar("Coordinates loss  (VAL)", val_coordinates / max_val_batch, epoch)
+        tensorboard.add_scalar("Confidence loss  (VAL)", val_confidence / max_val_batch, epoch)
+        tensorboard.add_scalar("Classes loss  (VAL)", val_classes / max_val_batch, epoch)
 
         if save is True and (epoch + 1) % save_every == 0:
             torch.save(model.state_dict(), saveName + "_after{}".format(str(epoch + 1)))

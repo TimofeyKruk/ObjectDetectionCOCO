@@ -70,7 +70,6 @@ if __name__ == '__main__':
 
     tensorboard = SummaryWriter(tensorboard_name)
 
-    print("___Training started:")
     tensorboard.add_graph(model, torch.rand(batch_size, 3, img_size_transform, img_size_transform))
 
     print("___Train loadCOCO started!")
@@ -79,6 +78,7 @@ if __name__ == '__main__':
     print("___Test loadCOCO started!")
     test = data_preparation.loadCOCO(datasetPATH, img_size_transform, train_bool=False, batch_size=batch_size)
 
+    print("___Training started:")
     model = yolo.train_model(model,
                              train,
                              test,

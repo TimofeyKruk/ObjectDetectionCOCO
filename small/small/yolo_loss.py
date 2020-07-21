@@ -17,7 +17,7 @@ class yoloLoss(nn.modules.loss._Loss):
                  cuda=True,
                  coord_scale=0.5,
                  noobject_scale=1.0,
-                 object_scale=3.0,
+                 object_scale=4.0,
                  class_scale=2.0,
                  threshold=0.6) -> None:
         super().__init__()
@@ -220,11 +220,11 @@ class yoloLoss(nn.modules.loss._Loss):
 
 def boxes_iou(boxes1, boxes2, device):
     # print("Before detach and .cpu?")
-    b1x1, b1y1 = (boxes1[:, :2].detach() - (boxes1[:, 2:4].detach() / 2)).split(1, 1)
-    b1x2, b1y2 = (boxes1[:, :2].detach() + (boxes1[:, 2:4].detach() / 2)).split(1, 1)
+    b1x1, b1y1 = (boxes1[:, :2].detach().cpu() - (boxes1[:, 2:4].detach().cpu() / 2)).split(1, 1)
+    b1x2, b1y2 = (boxes1[:, :2].detach().cpu() + (boxes1[:, 2:4].detach().cpu() / 2)).split(1, 1)
 
-    b2x1, b2y1 = (boxes2[:, :2].detach() - (boxes2[:, 2:4].detach() / 2)).split(1, 1)
-    b2x2, b2y2 = (boxes2[:, :2].detach() + (boxes2[:, 2:4].detach() / 2)).split(1, 1)
+    b2x1, b2y1 = (boxes2[:, :2].detach().cpu() - (boxes2[:, 2:4].detach().cpu() / 2)).split(1, 1)
+    b2x2, b2y2 = (boxes2[:, :2].detach().cpu() + (boxes2[:, 2:4].detach().cpu() / 2)).split(1, 1)
 
     # ("b1x1 device type: ",b1x1.device.type)
 

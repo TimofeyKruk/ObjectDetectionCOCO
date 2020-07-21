@@ -44,7 +44,7 @@ def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32, shuffle_test=Fa
                                         drop_last=True)
         return train_l
     else:
-        test = my_coco.CocoDetection(root=PATH + "images//val2014//val2014",
+        test = my_coco.CocoDetection(root=PATH + "images//val2014",
                                      annFile=PATH + "//annotations//annotations_trainval2014//annotations//instances_val2014.json",
                                      transforms=Resize(img_size=img_size),
                                      no_person=no_person)
