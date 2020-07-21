@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yolo_loss
 import cv2
+
 from src import post_processing
 
 
@@ -18,7 +19,7 @@ def load_model(PATH, class_number=95):
 
 if __name__ == '__main__':
     print("Predicting object boxes started!__SMALL__")
-    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights6_after15_after20_after30_after35_after44_after60_after70"
+    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights12_after10_after24_after36"
     print("Model PATH: ", PATH)
     num_classes = 5
     batch_size = 2
@@ -30,11 +31,13 @@ if __name__ == '__main__':
     dataset = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform,
                                         train_bool=False,
                                         shuffle_test=True,
-                                        batch_size=batch_size)
+                                        batch_size=batch_size,
+                                        no_person=True)
 
     for i, data in enumerate(dataset):
         images, targets = data[0], data[1]
 
+        model.eval()
         with torch.no_grad():
             outputs = model(images)
             criterion = yolo_loss.yoloLoss(num_classes, device="cpu", cuda=False)
@@ -51,8 +54,8 @@ if __name__ == '__main__':
                       3: (0.5, 0.5, 0.2),
                       4: (0.1, 0.7, 0.1)}
 
-        conf = 0.10
-        nms = 0.5
+        conf = 0.2
+        nms = 0.6
         print("Confidence threshold: ", conf)
         print("NMS threshold: ", nms)
         post_images = post_processing.draw_predictions(images, outputs,
@@ -66,7 +69,8 @@ if __name__ == '__main__':
 
         for j, post_image in enumerate(post_images):
             # cv2.imshow("Post", post_image)
-            cv2.imwrite("F:\WORK_Oxagile\INTERN\ImageSegmentation\small\predicted_after70//"+"no_person_SCORE_lessthresh2_rgb_" + str(i) + "_" + str(j) + ".jpg",
+            cv2.imwrite("F:\WORK_Oxagile\INTERN\ImageSegmentation\small//v12_predicted_after20//"
+                        + "2rgb_" + str(i) + "_" + str(j) + ".jpg",
                         cv2.cvtColor(post_image * 255, cv2.COLOR_RGB2BGR))
 
             plt.imshow(post_image)
@@ -82,5 +86,5 @@ if __name__ == '__main__':
         #                 print("Anchor: ", anchor, ", confidence: ", out[anchor, 4, i, j].sigmoid(), ", class: ",
         #                       torch.argmax(torch.softmax(out[anchor, 5:, i, j], dim=0)))
 
-        if i >= 20:
+        if i >= 3:
             break

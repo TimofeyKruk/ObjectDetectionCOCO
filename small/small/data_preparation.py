@@ -20,7 +20,7 @@ def my_collate(batch):
     return items
 
 
-def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32, shuffle_test=False):
+def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32, shuffle_test=False, no_person=False):
     """Loading train loaders of COCO detection dataset"""
 
     # Maybe later will add more transformations
@@ -32,26 +32,30 @@ def loadCOCO(PATH, img_size=416, train_bool=True, batch_size=32, shuffle_test=Fa
     if train_bool is True:
         train = my_coco.CocoDetection(root=PATH + "images//train2014",
                                       annFile=PATH + "annotations//annotations_trainval2014//annotations//instances_train2014.json",
-                                      transforms=Resize(img_size=img_size))
+                                      transforms=Resize(img_size=img_size),
+                                      no_person=no_person)
         print("___DataLoader started! Batch size: ", batch_size)
         train_l = dataloader.DataLoader(train,
                                         batch_size=batch_size,
                                         shuffle=True,
                                         collate_fn=my_collate,
                                         pin_memory=True,
-                                        num_workers=2)
+                                        num_workers=2,
+                                        drop_last=True)
         return train_l
     else:
         test = my_coco.CocoDetection(root=PATH + "images//val2014//val2014",
                                      annFile=PATH + "//annotations//annotations_trainval2014//annotations//instances_val2014.json",
-                                     transforms=Resize(img_size=img_size))
+                                     transforms=Resize(img_size=img_size),
+                                     no_person=no_person)
         print("___DataLoader started!")
         test_l = dataloader.DataLoader(test,
                                        batch_size=batch_size,
                                        shuffle=shuffle_test,
                                        collate_fn=my_collate,
                                        pin_memory=True,
-                                       num_workers=1)
+                                       num_workers=1,
+                                       drop_last=True)
         return test_l
 
 

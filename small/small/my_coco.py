@@ -94,21 +94,29 @@ class CocoDetection(VisionDataset):
             and returns a transformed version.
     """
 
-    def __init__(self, root, annFile, transform=None, target_transform=None, transforms=None):
+    def __init__(self, root, annFile, transform=None, target_transform=None, transforms=None, no_person=False):
         super(CocoDetection, self).__init__(root, transforms, transform, target_transform)
         from pycocotools.coco import COCO
         self.coco = COCO(annFile)
         # @@ My code @@
-        self.cat_ids = self.coco.getCatIds(catNms=["person", "car", "bird", "cat", "dog"])
+        if no_person is True:
+            catNms = ["car", "bird", "cat", "dog"]
+
+        else:
+            catNms = ["person", "car", "bird", "cat", "dog"]
+
+        self.cat_ids = self.coco.getCatIds(catNms=catNms)
         print("self.cat_ids: ", self.cat_ids)
         # self.ann_ids = self.coco.getAnnIds(catIds=self.cat_ids, iscrowd=None)
         # Set
         img_ids = set()
         for cat_id in self.cat_ids:
-            for im_id in self.coco.getImgIds(catIds=cat_id):
+            # TODO: Delete [::-1]! It is for not only person being chosen
+            for im_id in self.coco.getImgIds(catIds=cat_id)[::-1]:
                 img_ids.add(im_id)
 
-        img_ids = list(img_ids)
+        # TODO: DELETE [:12000]! It is for overfitting ability checking
+        img_ids = list(img_ids)[:12000]
         print("self.img_ids: len ", len(img_ids))
         # self.all_ann = self.coco.loadAnns(self.ann_ids)
         # I have changed sorted() argument
@@ -124,7 +132,10 @@ class CocoDetection(VisionDataset):
         """
         coco = self.coco
         img_id = self.ids[index]
-        ann_ids = coco.getAnnIds(imgIds=img_id, catIds=self.cat_ids)
+
+        catIds = coco.getCatIds(catNms=["person", "car", "bird", "cat", "dog"])
+
+        ann_ids = coco.getAnnIds(imgIds=img_id, catIds=catIds)
 
         target = coco.loadAnns(ann_ids)
 

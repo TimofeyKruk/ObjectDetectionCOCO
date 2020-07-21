@@ -1,9 +1,41 @@
 import torch
 import torch.nn as nn
 import yolo_loss
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 ## SMALL/SMALL
+
+def plot_anchors(output):
+    # Dog class probability layers for all anchors
+    plt.figure(figsize=(10, 10))
+
+    for anchor in range(5):
+        plt.subplot(5, 6, anchor * 6 + 1)
+        plt.title("Conf")
+        plt.imshow(output[0, anchor * 10 + 4, :, :].sigmoid().numpy())
+
+        plt.subplot(5, 6, anchor * 6 + 2)
+        plt.title("Person")
+        plt.imshow(output[0, anchor * 10 + 5, :, :].numpy())
+
+        plt.subplot(5, 6, anchor * 6 + 3)
+        plt.title("Car")
+        plt.imshow(output[0, anchor * 10 + 6, :, :].numpy())
+
+        plt.subplot(5, 6, anchor * 6 + 4)
+        plt.title("Bird")
+        plt.imshow(output[0, anchor * 10 + 7, :, :].numpy())
+
+        plt.subplot(5, 6, anchor * 6 + 5)
+        plt.title("Cat")
+        plt.imshow(output[0, anchor * 10 + 8, :, :].numpy())
+
+        plt.subplot(5, 6, anchor * 6 + 6)
+        plt.title("Dog")
+        plt.imshow(output[0, anchor * 10 + 9, :, :].numpy())
+    plt.show()
 
 
 def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=False, leaky_parameter=0.1,
@@ -103,7 +135,10 @@ class modelYOLO(nn.Module):
         # Part 3. Uniting residual and output
         output = torch.cat((output, output2), dim=1)
         output = self.p3conv1(output)
+
         output = self.p3conv2(output)
+        # plot_anchors(output)
+
         return output
 
 
@@ -132,26 +167,22 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 21], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[3, 15, 21], gamma=0.1)
 
-    for name, param in model.named_parameters():
-        if param.device.type != 'cuda':
-            print('param {}, not on GPU'.format(name), param.device.type)
+    max_batch_number = 0
+    log_size = 25
 
     for epoch in range(epoch_start, epoch_start + epochs):
+        model.train()
         running_total = 0.0
         running_coordinates = 0.0
         running_confidence = 0.0
         running_classes = 0.0
         print("Epoch: ", epoch)
 
-        for i, data in enumerate(train):
-            if torch.cuda.is_available() and cuda:
-                images = data[0].to(device)
-                targets = [label.to(device) for label in data[1]]
-                # print("___Data sent to device CUDA")
-            else:
-                images, targets = data[0], data[1]
+        for i, (images, targets) in enumerate(train):
+            images = images.to(device)
+            targets = [label.to(device) for label in targets]
 
             optimizer.zero_grad()
 
@@ -169,20 +200,50 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
             running_confidence += loss_confidence.item()
             running_classes += loss_classes.item()
 
-            if (i + 1) % 25 == 0:
-                tensorboard.add_scalar("Total loss (train)", running_total / 25, (epoch * 1660 + i + 1) // 25)
-                tensorboard.add_scalar("Coordinates loss (train)", running_coordinates / 25,
-                                       (epoch * 1660 + i + 1) // 25)
-                tensorboard.add_scalar("Confidence loss (train)", running_confidence / 25, (epoch * 1660 + i + 1) // 25)
-                tensorboard.add_scalar("Classes loss (train)", running_classes / 25, (epoch * 1660 + i + 1) // 25)
-                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_total / 25)
+            max_batch_number = max(max_batch_number, i)
+            if (i + 1) % log_size == 0:
+                tensorboard.add_scalar("Total loss (train)", running_total / log_size,
+                                       (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_scalar("Coordinates loss (train)", running_coordinates / log_size,
+                                       (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_scalar("Confidence loss (train)", running_confidence / log_size,
+                                       (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_scalar("Classes loss (train)", running_classes / log_size,
+                                       (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_total / log_size)
                 running_total = 0.0
                 running_coordinates = 0.0
                 running_confidence = 0.0
                 running_classes = 0.0
 
         print("Last used LR: ", scheduler.get_last_lr())
+        tensorboard.add_scalar("Learning rate (per epoch)", scheduler.get_last_lr(), epoch)
         scheduler.step()
+
+        # VALIDATION LOSS
+        print("Validation loss calculating started!")
+        model.eval()
+        max_val_batch = 0
+        with torch.no_grad():
+            for i, (images, targets) in enumerate(test):
+                val_total = 0.0
+                val_coordinates = 0.0
+                val_confidence = 0.0
+                val_classes = 0.0
+                max_val_batch = max(max_val_batch, i)
+
+                outputs = model(images)
+                loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
+
+                val_total += loss_total.item()
+                val_coordinates += loss_coordinates.item()
+                val_confidence += loss_confidence.item()
+                val_classes += loss_classes.item()
+
+        tensorboard.add_scalar("Total loss  (VAL)", val_total/max_val_batch, epoch)
+        tensorboard.add_scalar("Coordinates loss  (VAL)", val_coordinates/max_val_batch, epoch)
+        tensorboard.add_scalar("Confidence loss  (VAL)", val_confidence/max_val_batch, epoch)
+        tensorboard.add_scalar("Classes loss  (VAL)", val_classes/max_val_batch, epoch)
 
         if save is True and (epoch + 1) % save_every == 0:
             torch.save(model.state_dict(), saveName + "_after{}".format(str(epoch + 1)))
