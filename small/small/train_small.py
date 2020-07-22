@@ -15,9 +15,8 @@ if __name__ == '__main__':
                4: "cat",
                5: "dog"}
 
-    print("YOLO Object Detection. Start.py")
-    print("CWD: ")
-    print("__CWD: ", os.getcwd())
+    print("YOLOv2 Object Detection")
+    print("CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
     parser.add_argument("--saveName", help="Name how to save model weights file", default="SMALL_SavedModelWeights13")
     parser.add_argument("--dataset_path", help="PATH to dataset location",
@@ -33,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument("--continue_training",
                         help="Whether to download weights and continue to train or start from the beginning",
                         default="False")
-    parser.add_argument("--lr_start", help="Learning rate to start this training with", default="0.0001")
+    parser.add_argument("--lr_start", help="Learning rate to start this training with", default="0.00001")
     parser.add_argument("--save_every", help="Number of every epochs to save model weights", default="5")
     parser.add_argument("--no_person", help="Boolean variable whether to train on images with person or not",
                         default="False")
@@ -42,6 +41,7 @@ if __name__ == '__main__':
 
     save_every = int(args.save_every)
     lr_start = float(args.lr_start)
+    print("Starting learning rate: ", lr_start)
     continue_training = True if args.continue_training == "True" else False
     epoch_start = int(args.epoch_start)
 
@@ -76,7 +76,8 @@ if __name__ == '__main__':
     train = data_preparation.loadCOCO(datasetPATH, img_size_transform, train_bool=True, batch_size=batch_size,
                                       no_person=no_person)
     print("___Test loadCOCO started!")
-    test = data_preparation.loadCOCO(datasetPATH, img_size_transform, train_bool=False, batch_size=batch_size)
+    test = data_preparation.loadCOCO(datasetPATH, img_size_transform, train_bool=False, batch_size=batch_size,
+                                     no_person=no_person)
 
     print("___Training started:")
     model = yolo.train_model(model,

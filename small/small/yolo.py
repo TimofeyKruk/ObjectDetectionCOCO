@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import yolo_loss
-import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -128,9 +127,9 @@ class modelYOLO(nn.Module):
         output2 = self.residual_conv1(residual)
         # Reshaping the results
         batch_size, channels, h, w = output2.data.size()
-        output2 = output2.view(batch_size, int(channels / 4), h, 2, w, 2).contiguous()
+        output2 = output2.view(batch_size, int(channels // 4), h, 2, w, 2).contiguous()
         output2 = output2.permute(0, 3, 5, 1, 2, 4).contiguous()
-        output2 = output2.view(batch_size, -1, int(h / 2), int(w / 2))
+        output2 = output2.view(batch_size, -1, int(h // 2), int(w // 2))
 
         # Part 3. Uniting residual and output
         output = torch.cat((output, output2), dim=1)
@@ -156,7 +155,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
     '''
 
     if cuda is True and torch.cuda.is_available() is True:
-        device = torch.device("cuda")
+        device = torch.device("cuda:0")
     else:
         device = torch.device("cpu")
     model.to(device)
@@ -165,9 +164,9 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
     criterion = yolo_loss.yoloLoss(num_classes, device=device, cuda=cuda)
     criterion = criterion.to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.00005)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[3, 15, 21], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 15, 21], gamma=0.1)
 
     max_batch_number = 0
     log_size = 25
@@ -180,7 +179,8 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
 
         print("Epoch: ", epoch)
         model.train()
-
+        print("Model was switched back to train mode!")
+        # with torch.autograd.detect_anomaly():
         for i, data in enumerate(train):
             if torch.cuda.is_available() and cuda:
                 images = data[0].to(device)
@@ -191,7 +191,6 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
             optimizer.zero_grad()
 
             outputs = model(images)
-            # print("Variable {} is on device: {}".format("outputs",outputs.device.type))
 
             loss_total, loss_coordinates, loss_confidence, loss_classes = criterion(outputs, targets)
 
@@ -199,7 +198,11 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
             running_coordinates += loss_coordinates.item()
             running_confidence += loss_confidence.item()
             running_classes += loss_classes.item()
-            print(running_total)
+            # print("One batch coord: ", loss_coordinates.item())
+            # print("One batch confidence: ", loss_confidence.item())
+            # print("One batch classes: ", loss_classes.item())
+            # print("One batch total: ", loss_total.item())
+            # print("--------------------------")
 
             loss_total.backward()
 
@@ -215,12 +218,13 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
                                        (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 tensorboard.add_scalar("Classes loss (train)", running_classes / log_size,
                                        (epoch * (max_batch_number + 1) + i + 1) // log_size)
-                print("epoch: ", epoch, "batch: ", i, "loss_total: ", running_total / log_size)
+                print("epoch: ", epoch, "batch: ", i + 1, "loss_total: ", running_total / log_size)
                 running_total = 0.0
                 running_coordinates = 0.0
                 running_confidence = 0.0
                 running_classes = 0.0
 
+        print("Max batch number: ", max_batch_number + 1)
         print("Last used LR: ", scheduler.get_last_lr())
         tensorboard.add_scalar("Learning rate (per epoch)", scheduler.get_last_lr()[0], epoch)
         scheduler.step()
@@ -248,6 +252,7 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
                 val_confidence += loss_confidence.item()
                 val_classes += loss_classes.item()
 
+        print("Max val batch number: ", max_val_batch + 1)
         tensorboard.add_scalar("Total loss  (VAL)", val_total / max_val_batch, epoch)
         tensorboard.add_scalar("Coordinates loss  (VAL)", val_coordinates / max_val_batch, epoch)
         tensorboard.add_scalar("Confidence loss  (VAL)", val_confidence / max_val_batch, epoch)

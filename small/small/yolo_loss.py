@@ -85,7 +85,6 @@ class yoloLoss(nn.modules.loss._Loss):
             predicted_boxes, target, height, width)
 
         coordinates_mask.expand_as(t_coord)
-        # print("Coord mask shape", coordinates_mask.shape)
 
         t_classes = t_classes[classes_mask].view(-1).long()
         classes_mask = classes_mask.view(-1, 1).repeat(1, self.num_classes)
@@ -96,9 +95,6 @@ class yoloLoss(nn.modules.loss._Loss):
         # Losses
         lossMSE = nn.MSELoss(reduction="sum")
         lossCE = nn.CrossEntropyLoss()
-        # print("Variable {} is on device: {}".format("coordinates_mask", coordinates_mask.device.type))
-        # print("Variable {} is on device: {}".format("coordinates", coordinates.device.type))
-        # print("Variable {} is on device: {}".format("t_coord", t_coord.device.type))
 
         self.loss_coordinates = lossMSE(coordinates_mask * coordinates, coordinates_mask * t_coord)
         self.loss_coordinates *= self.coord_scale
@@ -140,7 +136,6 @@ class yoloLoss(nn.modules.loss._Loss):
             confidence_mask = confidence_mask.to(self.device)
             classes_mask = classes_mask.to(self.device)
             coordinates_mask = coordinates_mask.to(self.device)
-            # print("Variable {} is on device: {}".format("coordinates_mask in build_targets", coordinates_mask.device.type))
 
         # Adding two zeros for anchors
         extended_anchors = torch.cat([torch.zeros_like(self.anchors), self.anchors], 1)
@@ -159,9 +154,8 @@ class yoloLoss(nn.modules.loss._Loss):
 
             # Getting boxes
             for i, annotation in enumerate(target[instance]):
-                # x center
+                # x and y centers
                 gt_boxes[i, 0] = (annotation[0] + annotation[2] / 2)
-                # y center
                 gt_boxes[i, 1] = (annotation[1] + annotation[3] / 2)
                 # height and width
                 gt_boxes[i, 2] = (annotation[2])
@@ -172,13 +166,8 @@ class yoloLoss(nn.modules.loss._Loss):
             # Confidence mask elements set to true if predictions are greater than threshold (iou >thresh)
             iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes, self.device)
 
-            iou_check_for_zero = iou_gt_predicted < 0
-            if len(iou_gt_predicted[iou_check_for_zero]) != 0:
-                print("ZERO IoU for GT and predicted boxes!", len(iou_gt_predicted[iou_check_for_zero]))
-            # print("Ground Truth boxes shape ", gt_boxes.shape)
-            # print("Predicted boxes shape ", predicted_boxes.shape)
+
             temp_mask = (iou_gt_predicted > self.threshold).sum(0) >= 1
-            # print("Temp mask shape ", temp_mask.shape, temp_mask)
             confidence_mask[instance][temp_mask.view_as(confidence_mask[instance])] = 0
 
             # Searching for the best anchor for each ground truth box
@@ -192,18 +181,13 @@ class yoloLoss(nn.modules.loss._Loss):
                 gi = int(min(width - 1, max(0, gt_boxes[i, 0])))
                 gj = int(min(height - 1, max(0, gt_boxes[i, 1])))
                 best_anchor = best_anchors[i].item()
-                # print(type(i), type(best_anchor), type(height), type(width), type(gj), type(gi))
+
                 iou = iou_gt_predicted[i][best_anchor * height * width + gj * width + gi]
-                if iou < 0:
-                    print("ERRROR!!!!!! IOU < 0 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+
                 coordinates_mask[instance][best_anchor][0][gj * width + gi] = 1
                 classes_mask[instance][best_anchor][gj * width + gi] = 1
 
                 confidence_mask[instance][best_anchor][gj * width + gi] = self.object_scale
-                # TODO: I have created part of extra punishment for cat, dogs, birds, cars
-                if int(annotation[4]) != 0:
-                    extra_punishment = 0
-                    confidence_mask[instance][best_anchor][gj * width + gi] += extra_punishment
 
                 t_coord[instance][best_anchor][0][gj * width + gi] = gt_boxes[i, 0] - gi
                 t_coord[instance][best_anchor][1][gj * width + gi] = gt_boxes[i, 1] - gj
@@ -219,17 +203,13 @@ class yoloLoss(nn.modules.loss._Loss):
 
 
 def boxes_iou(boxes1, boxes2, device):
-    # print("Before detach and .cpu?")
     b1x1, b1y1 = (boxes1[:, :2].detach().cpu() - (boxes1[:, 2:4].detach().cpu() / 2)).split(1, 1)
     b1x2, b1y2 = (boxes1[:, :2].detach().cpu() + (boxes1[:, 2:4].detach().cpu() / 2)).split(1, 1)
 
     b2x1, b2y1 = (boxes2[:, :2].detach().cpu() - (boxes2[:, 2:4].detach().cpu() / 2)).split(1, 1)
     b2x2, b2y2 = (boxes2[:, :2].detach().cpu() + (boxes2[:, 2:4].detach().cpu() / 2)).split(1, 1)
 
-    # ("b1x1 device type: ",b1x1.device.type)
-
     dx = (b1x2.min(b2x2.t()) - b1x1.max(b2x1.t())).clamp(min=0)
-    # print("yolo loss, dx shape", dx.shape)
     dy = (b1y2.min(b2y2.t()) - b1y1.max(b2y1.t())).clamp(min=0)
     intersections = dx * dy
 
@@ -239,7 +219,6 @@ def boxes_iou(boxes1, boxes2, device):
 
     intersections = intersections.to(device)
     unions = unions.to(device)
-    # print("intersections  after .to device type: ",intersections.device.type,"device given: ",device)
 
     return intersections / unions
 
@@ -247,12 +226,3 @@ def boxes_iou(boxes1, boxes2, device):
 if __name__ == '__main__':
     print(boxes_iou(torch.tensor([[8.0, 8.0, 6.0, 6.0], [10.0, 10.0, 4.0, 4.0], [8.0, 8.0, 6.0, 6.0]]),
                     torch.tensor([[10.0, 10.0, 4.0, 4.0], [8.0, 8.0, 6.0, 6.0]])).sum(0))
-
-    # build target checking
-    # myloss= yoloLoss(80,anchors=[(1.3221, 1.73145),
-    #                                          (3.19275, 4.00944),
-    #                                          (5.05587, 8.09892),
-    #                                          (9.47112, 4.84053),
-    #                                          (11.2364, 10.0071)])
-    #
-    # myloss.build_target(torch.tensor([[8.0, 8.0, 6.0, 6.0]]), torch.tensor([[10.0, 10.0, 4.0, 4.0]]),1,1)

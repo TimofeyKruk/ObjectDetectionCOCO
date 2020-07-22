@@ -116,10 +116,9 @@ class CocoDetection(VisionDataset):
                 img_ids.add(im_id)
 
         # TODO: DELETE [:12000]! It is for overfitting ability checking
-        img_ids = list(img_ids)[:12000]
+        img_ids = list(img_ids)[:9600]
         print("self.img_ids: len ", len(img_ids))
         # self.all_ann = self.coco.loadAnns(self.ann_ids)
-        # I have changed sorted() argument
         self.ids = list(sorted(img_ids))
 
     def __getitem__(self, index):
