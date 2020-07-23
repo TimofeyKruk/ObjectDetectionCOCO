@@ -164,12 +164,12 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
     criterion = yolo_loss.yoloLoss(num_classes, device=device, cuda=cuda)
     criterion = criterion.to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.00005)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0001)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 15, 21], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 30, 40], gamma=0.1)
 
     max_batch_number = 0
-    log_size = 25
+    log_size = 20
 
     for epoch in range(epoch_start, epoch_start + epochs):
         running_total = 0.0
@@ -234,11 +234,12 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
         max_val_batch = 0
         model.eval()
         with torch.no_grad():
+            val_total = 0.0
+            val_coordinates = 0.0
+            val_confidence = 0.0
+            val_classes = 0.0
+
             for i, (images, ground_boxes) in enumerate(test):
-                val_total = 0.0
-                val_coordinates = 0.0
-                val_confidence = 0.0
-                val_classes = 0.0
                 max_val_batch = max(max_val_batch, i)
 
                 images = images.to(device)

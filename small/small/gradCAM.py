@@ -1,15 +1,11 @@
-"""
-Created on Thu Oct 26 11:06:51 2017
-@author: Utku Ozbulak - github.com/utkuozbulak
-"""
 from PIL import Image
 import numpy as np
 import torch
 import small.small.yolo as yolo
 from small.small import data_preparation
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
-from small.small.misc_functions import get_example_params, save_class_activation_images
 
 
 class CamExtractor():
@@ -41,10 +37,6 @@ class CamExtractor():
         x = self.model.conv12(x)
         x = self.model.conv13(x)
 
-        # HOOK Registration
-        saved_convolution = x
-        x.register_hook(self.save_gradient)
-
         # Saving residual
         residual = x
 
@@ -57,6 +49,10 @@ class CamExtractor():
         output = self.model.p2conv5(output)
         output = self.model.p2conv6(output)
         output = self.model.p2conv7(output)
+
+        # HOOK Registration (Grad-CAM part)
+        saved_convolution = output
+        output.register_hook(self.save_gradient)
 
         # "Shrinking" residual
         output2 = self.model.residual_conv1(residual)
@@ -140,15 +136,35 @@ def load_model(PATH, class_number=95):
     return model
 
 
+def heatmap_on_image(image, cam):
+    color_map = cm.get_cmap("hsv")
+    heatmap = color_map(cam)
+    image = Image.fromarray((np.transpose(image.numpy() * 255, (1, 2, 0))).astype(np.uint8))
+
+    heatmap_transparent = heatmap.copy()
+    heatmap_transparent[:, :, 3] = 0.4
+
+    heatmap = Image.fromarray((heatmap * 255).astype(np.uint8))
+    heatmap_transparent = Image.fromarray((heatmap_transparent * 255).astype(np.uint8))
+
+    # Applying heatmap transparent on image
+    heatmap_image = Image.new("RGBA", image.size)
+    heatmap_image = Image.alpha_composite(heatmap_image, image.convert("RGBA"))
+    heatmap_image = Image.alpha_composite(heatmap_image, heatmap_transparent)
+
+    return heatmap, heatmap_image
+
+
 if __name__ == '__main__':
-    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights6_after15_after20_after30_after35_after44_after60_after70"
+    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small//"
+    modelPATH = "SMALL_SavedModelWeights12_after20"
+
     num_classes = 5
     batch_size = 1
     img_size_transform = 32 * 13
 
     # Loading model from memory
-    model = load_model(PATH, num_classes)
-
+    model = load_model(PATH + modelPATH, num_classes)
     dataset = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform,
                                         train_bool=False,
                                         shuffle_test=False,
@@ -156,19 +172,34 @@ if __name__ == '__main__':
 
     for b, data in enumerate(dataset):
         images, targets = data
-        file_name_to_export = "Heatmap" + str(b) + ".jpg"
-        # Grad cam
-        grad_cam = GradCam(model,
-                           target_layer=13)
 
+        # Set target class  and layer here (person, cat, dog, bird, car)
+        target_class = "person"
+        # Possible string names of layers are: conv13, conv5, p2conv7
+        target_layer="conv13"
+
+        folder="visualization_v12_20//"
+        file_name_to_export = PATH + folder+ + str(b) + "_" + target_class
+
+        # Grad cam
+        grad_cam = GradCam(model, target_layer=target_layer)
         # Generate cam mask
-        cam = grad_cam.generate_cam(images,
-                                    target_class="dog")
-        plt.imshow(cam)
+        cam = grad_cam.generate_cam(images, target_class=target_class)
+
+        heatmap, heatmap_image = heatmap_on_image(images[0], cam)
+
+        plt.title(target_class + " heatmap")
+        plt.imshow(heatmap_image)
         plt.show()
 
-        # Save mask
-        # save_class_activation_images(images[0], cam, file_name_to_export)
+        # Saving heatmap and heatmap_on_image
+        heatmap.save(file_name_to_export + "_hm.png")
+        heatmap_image.save(file_name_to_export + "_hm_im.png")
+
+        heatmap.close()
+        heatmap_image.close()
+
         print('Grad cam calculated for one image!')
 
-        break
+        if b > 25:
+            break
