@@ -112,7 +112,7 @@ class CocoDetection(VisionDataset):
         img_ids = set()
         for cat_id in self.cat_ids[::-1]:
             # TODO: Delete [::-1]! It is for not only person being chosen
-            for im_id in self.coco.getImgIds(catIds=cat_id)[:1700]:
+            for im_id in self.coco.getImgIds(catIds=cat_id)[:1900]:
                 img_ids.add(im_id)
 
         # TODO: DELETE [:12000]! It is for overfitting ability checking

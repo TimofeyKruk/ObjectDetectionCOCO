@@ -4,32 +4,43 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def draw_gt_boxes(images, targets):
+def draw_gt_boxes(images, targets, gt_classes_dict=None):
     gt_images = []
     for i, image in enumerate(images):
-        height, width = image.shape[:2]
+        if type(image) is torch.Tensor:
+            image = np.transpose(image.numpy(), (1, 2, 0))
+            # TODO: Bug that better be fixed. Don't know how to fix it.
+            np_image = np.zeros(image.shape, np.float32)
+            np_image[2:-2, 2:-2, 0:3] = image[2:-2, 2:-2, 0:3]
+        else:  # numpy array
+            np_image = image
+
+        height, width = np_image.shape[:2]
         for object in targets[i]:
             x1 = int(max(object[0], 0))
             y1 = int(max(object[1], 0))
             x2 = int(min(object[0] + object[2], width))
             y2 = int(min(object[1] + object[3], height))
 
-            cv2.rectangle(image, (x1, y1), (x2, y2), color=(1, 0.43, 0), thickness=2)
+            cv2.rectangle(np_image, (x1, y1), (x2, y2), color=(0.8, 0.43, 0.1), thickness=2)
             print("___GT___Object : ", object[4].item(), ", coordinates: ", x1, " ", y1, " ", x2, " ", y2)
-            # text_size = cv2.getTextSize(str(object[4]) + ": gt_pr=1.0",
-            #                             cv2.FONT_HERSHEY_PLAIN,
-            #                             fontScale=1,
-            #                             thickness=1)[0]
-            # cv2.rectangle(image,
-            #               (x1, y1),
-            #               (x1 + text_size[0] + 3, y1 + text_size[1] + 4),
-            #               (1, 0.5, 0.5),
-            #               -1)
-            # cv2.putText(image,
-            #             str(object[4]) + ": gt_pr=1.0",
-            #             (x1, y1 + text_size[1] + 4),
-            #             cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
-        gt_images.append(image)
+
+            object_class = int(object[4])
+            text = gt_classes_dict[object_class] if gt_classes_dict != None else str(object_class)
+            text_size = cv2.getTextSize(text,
+                                        cv2.FONT_HERSHEY_PLAIN,
+                                        fontScale=1,
+                                        thickness=1)[0]
+            cv2.rectangle(np_image,
+                          (x1, y1),
+                          (x1 + text_size[0] + 3, y1 + text_size[1] + 4),
+                          (0.8, 0.43, 0.1),
+                          -1)
+            cv2.putText(np_image,
+                        text,
+                        (x1, y1 + text_size[1] + 4),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
+        gt_images.append(np_image)
     return gt_images
 
 
@@ -44,11 +55,14 @@ def draw_predictions(images, outputs, gt_classes_dict=None, color_dict=None, ima
     if len(predictions) != 0:
         for i, image in enumerate(images):
             print("NewImage")
-            image = (np.transpose(image.numpy(), (1, 2, 0)))
 
-            # TODO: Bug that better be fixed. Don't know how to fix it.
-            np_image = np.zeros(image.shape, np.float32)
-            np_image[2:-2, 2:-2, 0:3] = image[2:-2, 2:-2, 0:3]
+            if type(image) is torch.Tensor:
+                image = (np.transpose(image.numpy(), (1, 2, 0)))
+                # TODO: Bug that better be fixed. Don't know how to fix it.
+                np_image = np.zeros(image.shape, np.float32)
+                np_image[2:-2, 2:-2, 0:3] = image[2:-2, 2:-2, 0:3]
+            else:  # numpy array
+                np_image = image
 
             if len(predictions[i]) != 0:
                 for prediction in predictions[i]:

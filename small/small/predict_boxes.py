@@ -19,7 +19,7 @@ def load_model(PATH, class_number=95):
 
 if __name__ == '__main__':
     print("Predicting object boxes started!__SMALL__")
-    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights12_after10_after24_after36"
+    PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small\SMALL_SavedModelWeights12_after20"
     print("Model PATH: ", PATH)
     num_classes = 5
     batch_size = 2
@@ -58,19 +58,20 @@ if __name__ == '__main__':
         nms = 0.6
         print("Confidence threshold: ", conf)
         print("NMS threshold: ", nms)
-        post_images = post_processing.draw_predictions(images, outputs,
+
+        if len(targets) != 0:
+            post_images = post_processing.draw_gt_boxes(images, targets, gt_classes_dict=gt_dict)
+
+        post_images = post_processing.draw_predictions(post_images, outputs,
                                                        gt_classes_dict=gt_dict,
                                                        color_dict=color_dict,
                                                        confidence_threshold=conf,
                                                        nms_threshold=nms)
 
-        if len(targets) != 0:
-            post_images = post_processing.draw_gt_boxes(post_images, targets)
-
         for j, post_image in enumerate(post_images):
             # cv2.imshow("Post", post_image)
             cv2.imwrite("F:\WORK_Oxagile\INTERN\ImageSegmentation\small//v12_predicted_after20//"
-                        + "2rgb_" + str(i) + "_" + str(j) + ".jpg",
+                        + "5rgb_" + str(i) + "_" + str(j) + ".jpg",
                         cv2.cvtColor(post_image * 255, cv2.COLOR_RGB2BGR))
 
             plt.imshow(post_image)

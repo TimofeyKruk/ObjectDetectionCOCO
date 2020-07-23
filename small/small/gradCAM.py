@@ -6,6 +6,7 @@ from small.small import data_preparation
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
+from src import post_processing
 
 
 class CamExtractor():
@@ -28,6 +29,12 @@ class CamExtractor():
         x = self.model.conv3(x)
         x = self.model.conv4(x)
         x = self.model.conv5(x)
+
+        # ___ HOOK Registration (Grad-CAM part) ___
+        if self.target_layer == "conv5":
+            saved_convolution = x
+            x.register_hook(self.save_gradient)
+
         x = self.model.conv6(x)
         x = self.model.conv7(x)
         x = self.model.conv8(x)
@@ -36,6 +43,11 @@ class CamExtractor():
         x = self.model.conv11(x)
         x = self.model.conv12(x)
         x = self.model.conv13(x)
+
+        # ___ HOOK Registration (Grad-CAM part) ___
+        if self.target_layer == "conv13":
+            saved_convolution = x
+            x.register_hook(self.save_gradient)
 
         # Saving residual
         residual = x
@@ -50,9 +62,10 @@ class CamExtractor():
         output = self.model.p2conv6(output)
         output = self.model.p2conv7(output)
 
-        # HOOK Registration (Grad-CAM part)
-        saved_convolution = output
-        output.register_hook(self.save_gradient)
+        # ___ HOOK Registration (Grad-CAM part) ___
+        if self.target_layer == "p2conv7":
+            saved_convolution = output
+            output.register_hook(self.save_gradient)
 
         # "Shrinking" residual
         output2 = self.model.residual_conv1(residual)
@@ -65,6 +78,11 @@ class CamExtractor():
         # Part 3. Uniting residual and output
         output = torch.cat((output, output2), dim=1)
         output = self.model.p3conv1(output)
+
+        # ___ HOOK Registration (Grad-CAM part) ___
+        if self.target_layer == "p3conv1":
+            saved_convolution = output
+            output.register_hook(self.save_gradient)
 
         output = self.model.p3conv2(output)
 
@@ -93,6 +111,7 @@ class GradCam():
                    "cat": 3,
                    "dog": 4}
         target_class = my_dict[target_class]
+
         # Target for backprop
         one_hot_output = torch.FloatTensor(model_output.size()).zero_()
         for anchor in range(5):
@@ -139,7 +158,11 @@ def load_model(PATH, class_number=95):
 def heatmap_on_image(image, cam):
     color_map = cm.get_cmap("hsv")
     heatmap = color_map(cam)
-    image = Image.fromarray((np.transpose(image.numpy() * 255, (1, 2, 0))).astype(np.uint8))
+
+    if image is torch.Tensor:
+        image = Image.fromarray((np.transpose(image.numpy() * 255, (1, 2, 0))).astype(np.uint8))
+    else:  # numpy array
+        image = Image.fromarray((image * 255).astype(np.uint8))
 
     heatmap_transparent = heatmap.copy()
     heatmap_transparent[:, :, 3] = 0.4
@@ -170,36 +193,71 @@ if __name__ == '__main__':
                                         shuffle_test=False,
                                         batch_size=batch_size)
 
+    # Set target class  and layer here (person, cat, dog, bird, car)
+    target_class = "person"
+    # Possible string names of layers are: conv13, conv5, p2conv7, p3conv1
+    target_layer = "p3conv1"
+
+    folder = "visualization_v12_20//"
+
+    # Swithing to eval mode!
+    model.eval()
+    # Iterating over dataset
     for b, data in enumerate(dataset):
         images, targets = data
 
-        # Set target class  and layer here (person, cat, dog, bird, car)
-        target_class = "person"
-        # Possible string names of layers are: conv13, conv5, p2conv7
-        target_layer="conv13"
+        file_name_to_export = PATH + folder + target_layer + "//" + str(b) + "_" + target_class + "_" + target_layer
 
-        folder="visualization_v12_20//"
-        file_name_to_export = PATH + folder+ + str(b) + "_" + target_class
+        # ______________Predicting and drawing boxes__________________
+        gt_dict = {0: "Person",
+                   1: "Car",
+                   2: "Bird",
+                   3: "Cat",
+                   4: "Dog"}
+        color_dict = {0: (0.1, 0.2, 0.1),
+                      1: (0.6, 0.2, 0.3),
+                      2: (0.3, 0.3, 0.5),
+                      3: (0.5, 0.5, 0.2),
+                      4: (0.1, 0.7, 0.1)}
+        conf = 0.2
+        nms = 0.6
+        print("Confidence threshold: ", conf)
+        print("NMS threshold: ", nms)
+
+        outputs = model(images)
+
+        if len(targets) != 0:
+            post_images = post_processing.draw_gt_boxes(images, targets, gt_classes_dict=gt_dict)
+
+        post_images = post_processing.draw_predictions(post_images, outputs,
+                                                       gt_classes_dict=gt_dict,
+                                                       color_dict=color_dict,
+                                                       confidence_threshold=conf,
+                                                       nms_threshold=nms)
+
+        # _____________________________________________________________
 
         # Grad cam
         grad_cam = GradCam(model, target_layer=target_layer)
         # Generate cam mask
         cam = grad_cam.generate_cam(images, target_class=target_class)
 
-        heatmap, heatmap_image = heatmap_on_image(images[0], cam)
+        # Heatmap creation
+        heatmap, heatmap_image = heatmap_on_image(post_images[0], cam)
 
-        plt.title(target_class + " heatmap")
+        # Plotting results
+        plt.title(target_class + " heatmap, layer: " + target_layer)
         plt.imshow(heatmap_image)
         plt.show()
 
         # Saving heatmap and heatmap_on_image
-        heatmap.save(file_name_to_export + "_hm.png")
-        heatmap_image.save(file_name_to_export + "_hm_im.png")
+        # heatmap.save(file_name_to_export + "_hm.png")
+        heatmap_image.save(file_name_to_export + ".png")
 
         heatmap.close()
         heatmap_image.close()
 
-        print('Grad cam calculated for one image!')
+        print("Grad cam calculated for batch image:", b)
 
         if b > 25:
             break
