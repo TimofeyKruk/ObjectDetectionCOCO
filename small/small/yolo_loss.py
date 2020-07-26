@@ -15,9 +15,9 @@ class yoloLoss(nn.modules.loss._Loss):
                           (11.2364, 10.0071)],
                  cell_size=32,
                  cuda=True,
-                 coord_scale=0.5,
+                 coord_scale=1.0,
                  noobject_scale=1.0,
-                 object_scale=4.0,
+                 object_scale=3.0,
                  class_scale=2.0,
                  threshold=0.6) -> None:
         super().__init__()
@@ -93,7 +93,7 @@ class yoloLoss(nn.modules.loss._Loss):
         classes = classes[classes_mask].view(-1, self.num_classes)
 
         # Losses
-        lossMSE = nn.MSELoss(reduction="sum")
+        lossMSE = nn.MSELoss()
         lossCE = nn.CrossEntropyLoss()
 
         self.loss_coordinates = lossMSE(coordinates_mask * coordinates, coordinates_mask * t_coord)

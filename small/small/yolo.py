@@ -37,7 +37,7 @@ def plot_anchors(output):
     plt.show()
 
 
-def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=False, leaky_parameter=0.1,
+def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=True, leaky_parameter=0.1,
                inplace=True):
     if max_pool is True:
         return nn.Sequential(nn.Conv2d(in_dim, out_dim, filter_size, stride, padding, bias=bias),
@@ -141,7 +141,7 @@ class modelYOLO(nn.Module):
         return output
 
 
-def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.0001, epoch_start=0, epochs=10,
+def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start=0.00001, epoch_start=0, epochs=10,
                 cuda=True, save=True, save_every=5) -> modelYOLO:
     '''
     :param model_yolo: object of class modelYOLO
@@ -204,12 +204,20 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
             # print("One batch total: ", loss_total.item())
             # print("--------------------------")
 
+            # TODO: delete, it is for checking optimizer step workability
+            # a = list(model.parameters())[0].clone()
             loss_total.backward()
 
             optimizer.step()
+            # b = list(model.parameters())[0].clone()
+
+            # print("Is a equal to b?: ", torch.equal(a.data, b.data))
 
             max_batch_number = max(max_batch_number, i)
             if (i + 1) % log_size == 0:
+                # TODO: Delete this print
+                print("@@@@@@grad for first layer: ", list(model.parameters())[0].grad.max(),
+                      list(model.parameters())[0].grad.min())
                 tensorboard.add_scalar("Total loss (train)", running_total / log_size,
                                        (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 tensorboard.add_scalar("Coordinates loss (train)", running_coordinates / log_size,
@@ -223,6 +231,42 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
                 running_coordinates = 0.0
                 running_confidence = 0.0
                 running_classes = 0.0
+                # ______ Layer's weights and gradients output for tensorboard ______
+                # Conv1
+                tensorboard.add_histogram("conv1_weight", model.conv1[0].weight,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("conv1_bias", model.conv1[0].bias,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("conv1_weight_gradient", model.conv1[0].weight.grad,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # Conv13
+                tensorboard.add_histogram("conv13_weight", model.conv13[0].weight,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+
+                tensorboard.add_histogram("conv13_bias", model.conv13[0].bias,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("conv13_weight_gradient", model.conv13[0].weight.grad,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # p2conv2
+                tensorboard.add_histogram("p2conv2_weight", model.p2conv2[0].weight,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("p2conv2_weight_gradient", model.p2conv2[0].weight.grad,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # p2conv7
+                tensorboard.add_histogram("p2conv7_weight", model.p2conv7[0].weight,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("p2conv7_weight_gradient", model.p2conv7[0].weight.grad,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # residual_conv1
+                tensorboard.add_histogram("residual_conv1_weight", model.residual_conv1[0].weight,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("residual_conv1_weight_gradient", model.residual_conv1[0].weight.grad,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # p3conv2
+                tensorboard.add_histogram("p3conv2_weight", model.p3conv2.weight,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                tensorboard.add_histogram("p3conv2_weight_gradient", model.p3conv2.weight.grad,
+                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
 
         print("Max batch number: ", max_batch_number + 1)
         print("Last used LR: ", scheduler.get_last_lr())

@@ -114,8 +114,12 @@ class GradCam():
 
         # Target for backprop
         one_hot_output = torch.FloatTensor(model_output.size()).zero_()
+
+        # ___________ What activations we are interested in ___________
         for anchor in range(5):
             one_hot_output[0, anchor * 10 + 5 + target_class, :, :] = 1
+        # _____________________________________________________________
+
 
         # Zero grads
         self.model.zero_grad()
@@ -180,7 +184,7 @@ def heatmap_on_image(image, cam):
 
 if __name__ == '__main__':
     PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small//"
-    modelPATH = "SMALL_SavedModelWeights12_after20"
+    modelPATH = "SMALL_SavedModelWeights15no_residual_after40"
 
     num_classes = 5
     batch_size = 1
@@ -196,9 +200,9 @@ if __name__ == '__main__':
     # Set target class  and layer here (person, cat, dog, bird, car)
     target_class = "person"
     # Possible string names of layers are: conv13, conv5, p2conv7, p3conv1
-    target_layer = "p3conv1"
+    target_layer = "p2conv7"
 
-    folder = "visualization_v12_20//"
+    folder = "visualization_v15no_residual_40//"
 
     # Swithing to eval mode!
     model.eval()
@@ -219,7 +223,7 @@ if __name__ == '__main__':
                       2: (0.3, 0.3, 0.5),
                       3: (0.5, 0.5, 0.2),
                       4: (0.1, 0.7, 0.1)}
-        conf = 0.2
+        conf = 0.1
         nms = 0.6
         print("Confidence threshold: ", conf)
         print("NMS threshold: ", nms)
@@ -252,6 +256,7 @@ if __name__ == '__main__':
 
         # Saving heatmap and heatmap_on_image
         # heatmap.save(file_name_to_export + "_hm.png")
+        # TODO: Return saving image!
         heatmap_image.save(file_name_to_export + ".png")
 
         heatmap.close()
