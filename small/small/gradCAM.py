@@ -184,7 +184,7 @@ def heatmap_on_image(image, cam):
 
 if __name__ == '__main__':
     PATH = "F:\WORK_Oxagile\INTERN\ImageSegmentation\small//"
-    modelPATH = "SMALL_SavedModelWeights15no_residual_after40"
+    modelPATH = "SMALL_SavedModelWeights20"
 
     num_classes = 5
     batch_size = 1
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     # Loading model from memory
     model = load_model(PATH + modelPATH, num_classes)
     dataset = data_preparation.loadCOCO("F:\WORK_Oxagile\INTERN\Datasets\COCO\\", img_size_transform,
-                                        train_bool=False,
+                                        train_bool=True,
                                         shuffle_test=False,
                                         batch_size=batch_size)
 
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     # Possible string names of layers are: conv13, conv5, p2conv7, p3conv1
     target_layer = "p2conv7"
 
-    folder = "visualization_v15no_residual_40//"
+    folder = "visualization_v18overfit_35//"
 
     # Swithing to eval mode!
     model.eval()
@@ -210,7 +210,7 @@ if __name__ == '__main__':
     for b, data in enumerate(dataset):
         images, targets = data
 
-        file_name_to_export = PATH + folder + target_layer + "//" + str(b) + "_" + target_class + "_" + target_layer
+        file_name_to_export = PATH + folder + target_layer + "//" + str(b) + "_" + target_class + "_" + target_layer+"_train"
 
         # ______________Predicting and drawing boxes__________________
         gt_dict = {0: "Person",
@@ -223,7 +223,7 @@ if __name__ == '__main__':
                       2: (0.3, 0.3, 0.5),
                       3: (0.5, 0.5, 0.2),
                       4: (0.1, 0.7, 0.1)}
-        conf = 0.1
+        conf = 0.2
         nms = 0.6
         print("Confidence threshold: ", conf)
         print("NMS threshold: ", nms)
@@ -257,7 +257,7 @@ if __name__ == '__main__':
         # Saving heatmap and heatmap_on_image
         # heatmap.save(file_name_to_export + "_hm.png")
         # TODO: Return saving image!
-        heatmap_image.save(file_name_to_export + ".png")
+        heatmap_image.save(file_name_to_export + "RUBBISH.png")
 
         heatmap.close()
         heatmap_image.close()

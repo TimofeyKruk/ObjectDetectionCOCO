@@ -12,32 +12,36 @@ def plot_anchors(output):
 
     for anchor in range(5):
         plt.subplot(5, 6, anchor * 6 + 1)
-        plt.title("Conf")
-        plt.imshow(output[0, anchor * 10 + 4, :, :].sigmoid().numpy())
+        confidence = output[0, anchor * 10 + 4, :, :].sigmoid().numpy()
+        plt.title("Conf" + "mean:" + "{:.3f}".format(confidence.mean()))
+        plt.imshow(confidence, cmap="plasma")
+
+        softmax_output = torch.softmax(output[0, anchor * 10 + 5:(anchor + 1) * 10, :, :], dim=0)
+        softmax_output = softmax_output.numpy()
 
         plt.subplot(5, 6, anchor * 6 + 2)
         plt.title("Person")
-        plt.imshow(output[0, anchor * 10 + 5, :, :].numpy())
+        plt.imshow(softmax_output[0, :, :], cmap="plasma")
 
         plt.subplot(5, 6, anchor * 6 + 3)
         plt.title("Car")
-        plt.imshow(output[0, anchor * 10 + 6, :, :].numpy())
+        plt.imshow(softmax_output[1, :, :], cmap="plasma")
 
         plt.subplot(5, 6, anchor * 6 + 4)
         plt.title("Bird")
-        plt.imshow(output[0, anchor * 10 + 7, :, :].numpy())
+        plt.imshow(softmax_output[2, :, :], cmap="plasma")
 
         plt.subplot(5, 6, anchor * 6 + 5)
         plt.title("Cat")
-        plt.imshow(output[0, anchor * 10 + 8, :, :].numpy())
+        plt.imshow(softmax_output[3, :, :], cmap="plasma")
 
         plt.subplot(5, 6, anchor * 6 + 6)
         plt.title("Dog")
-        plt.imshow(output[0, anchor * 10 + 9, :, :].numpy())
+        plt.imshow(softmax_output[4, :, :], cmap="plasma")
     plt.show()
 
 
-def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=True, leaky_parameter=0.1,
+def conv_layer(in_dim, out_dim, filter_size, stride, padding, max_pool=False, bias=False, leaky_parameter=0.1,
                inplace=True):
     if max_pool is True:
         return nn.Sequential(nn.Conv2d(in_dim, out_dim, filter_size, stride, padding, bias=bias),
@@ -92,7 +96,7 @@ class modelYOLO(nn.Module):
         # Summing residual and previous layer output
         self.p3conv1 = conv_layer(256 + 1024, 1024, 3, 1, 1)
 
-        self.p3conv2 = nn.Conv2d(1024, len(self.anchors) * (5 + self.num_classes), 1, 1, 0, bias=False)
+        self.p3conv2 = nn.Conv2d(1024, len(self.anchors) * (5 + self.num_classes), 1, 1, 0, bias=True)
 
     def forward(self, x):
         # First part before residual saving (feature extraction)
@@ -164,12 +168,12 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
     criterion = yolo_loss.yoloLoss(num_classes, device=device, cuda=cuda)
     criterion = criterion.to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0001)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.00001)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 30, 40], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[3, 15, 30, 40], gamma=0.1)
 
     max_batch_number = 0
-    log_size = 20
+    log_size = 30
 
     for epoch in range(epoch_start, epoch_start + epochs):
         running_total = 0.0
@@ -216,8 +220,9 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
             max_batch_number = max(max_batch_number, i)
             if (i + 1) % log_size == 0:
                 # TODO: Delete this print
-                print("@@@@@@grad for first layer: ", list(model.parameters())[0].grad.max(),
-                      list(model.parameters())[0].grad.min())
+                # print("Grad for conv1: ", list(model.parameters())[0].grad.min(),
+                #       list(model.parameters())[0].grad.mean(), list(model.parameters())[0].grad.max())
+
                 tensorboard.add_scalar("Total loss (train)", running_total / log_size,
                                        (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 tensorboard.add_scalar("Coordinates loss (train)", running_coordinates / log_size,
@@ -235,16 +240,16 @@ def train_model(model, train, test, num_classes, saveName, tensorboard, lr_start
                 # Conv1
                 tensorboard.add_histogram("conv1_weight", model.conv1[0].weight,
                                           (epoch * (max_batch_number + 1) + i + 1) // log_size)
-                tensorboard.add_histogram("conv1_bias", model.conv1[0].bias,
-                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # tensorboard.add_histogram("conv1_bias", model.conv1[0].bias,
+                #                           (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 tensorboard.add_histogram("conv1_weight_gradient", model.conv1[0].weight.grad,
                                           (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 # Conv13
                 tensorboard.add_histogram("conv13_weight", model.conv13[0].weight,
                                           (epoch * (max_batch_number + 1) + i + 1) // log_size)
 
-                tensorboard.add_histogram("conv13_bias", model.conv13[0].bias,
-                                          (epoch * (max_batch_number + 1) + i + 1) // log_size)
+                # tensorboard.add_histogram("conv13_bias", model.conv13[0].bias,
+                #                           (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 tensorboard.add_histogram("conv13_weight_gradient", model.conv13[0].weight.grad,
                                           (epoch * (max_batch_number + 1) + i + 1) // log_size)
                 # p2conv2

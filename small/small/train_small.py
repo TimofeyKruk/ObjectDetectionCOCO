@@ -19,15 +19,15 @@ if __name__ == '__main__':
     print("CWD: ", os.getcwd())
     parser = argparse.ArgumentParser()
     parser.add_argument("--saveName", help="Name how to save model weights file",
-                        default="SMALL_SavedModelWeights18")
+                        default="SMALL_SavedModelWeights21_two_classes")
     parser.add_argument("--dataset_path", help="PATH to dataset location",
                         default="//media//cuda//HDD//Internship//Kruk//COCO//")
     parser.add_argument("--tensorboard", help="Name how to save tensorboard logs",
-                        default="SMALL_yolov2_training18")
+                        default="SMALL_yolov2_training21_two_classes")
     parser.add_argument("--img_size", help="Images will be scaled to img_size*img_size", default="416")
     parser.add_argument("--batch", help="Batch size", default="32")
     parser.add_argument("--num_classes", help="Int number of classes", default="5")
-    parser.add_argument("--epochs", help="Number of epochs to train", default="20")
+    parser.add_argument("--epochs", help="Number of epochs to train", default="25")
     parser.add_argument("--epoch_start", help="Number of epoch to continue to train", default="0")
     parser.add_argument("--cuda", help="Bool. Whether to train on CUDA or not", default="True")
     parser.add_argument("--continue_training",

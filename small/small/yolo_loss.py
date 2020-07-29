@@ -17,8 +17,8 @@ class yoloLoss(nn.modules.loss._Loss):
                  cuda=True,
                  coord_scale=1.0,
                  noobject_scale=1.0,
-                 object_scale=3.0,
-                 class_scale=2.0,
+                 object_scale=5.0,
+                 class_scale=1.0,
                  threshold=0.6) -> None:
         super().__init__()
 
@@ -75,16 +75,16 @@ class yoloLoss(nn.modules.loss._Loss):
 
         # Calculating precise coordinates of boxes corresponding to the whole image
         # TODO: I have deleted .detach for cpu, but will I need it for GPU?
-        predicted_boxes[:, 0] = (coordinates[:, :, 0] + lin_x).view(-1)
-        predicted_boxes[:, 1] = (coordinates[:, :, 1] + lin_y).view(-1)
-        predicted_boxes[:, 2] = (coordinates[:, :, 2].exp() * anchor_width).view(-1)
-        predicted_boxes[:, 3] = (coordinates[:, :, 3].exp() * anchor_height).view(-1)
+        predicted_boxes[:, 0] = (coordinates[:, :, 0].detach() + lin_x).view(-1)
+        predicted_boxes[:, 1] = (coordinates[:, :, 1].detach() + lin_y).view(-1)
+        predicted_boxes[:, 2] = (coordinates[:, :, 2].detach().exp() * anchor_width).view(-1)
+        predicted_boxes[:, 3] = (coordinates[:, :, 3].detach().exp() * anchor_height).view(-1)
 
         # Receiving target values
         coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes = self.build_targets(
             predicted_boxes, target, height, width)
 
-        coordinates_mask.expand_as(t_coord)
+        coordinates_mask = coordinates_mask.expand_as(t_coord)
 
         t_classes = t_classes[classes_mask].view(-1).long()
         classes_mask = classes_mask.view(-1, 1).repeat(1, self.num_classes)
@@ -116,7 +116,7 @@ class yoloLoss(nn.modules.loss._Loss):
         :return: coordinates_mask, confidence_mask, classes_mask, t_coord, t_conf, t_classes <- masks
         '''
         batch_size = len(target)
-        # Masks initialization with ones
+        # Masks initialization with ones or zeros
         coordinates_mask = torch.zeros(batch_size, self.num_anchors, 1, height * width, requires_grad=False).type(
             torch.ByteTensor)
         confidence_mask = self.noobject_scale * torch.ones(batch_size, self.num_anchors, height * width,
@@ -166,7 +166,7 @@ class yoloLoss(nn.modules.loss._Loss):
             # Confidence mask elements set to true if predictions are greater than threshold (iou >thresh)
             iou_gt_predicted = boxes_iou(gt_boxes, current_predicted_boxes, self.device)
 
-
+            # Part for not punishing good but not right predictions
             temp_mask = (iou_gt_predicted > self.threshold).sum(0) >= 1
             confidence_mask[instance][temp_mask.view_as(confidence_mask[instance])] = 0
 
@@ -215,7 +215,7 @@ def boxes_iou(boxes1, boxes2, device):
 
     area1 = (b1x2 - b1x1) * (b1y2 - b1y1)
     area2 = (b2x2 - b2x1) * (b2y2 - b2y1)
-    unions = area1 + area2.t() - intersections
+    unions = (area1 + area2.t()) - intersections
 
     intersections = intersections.to(device)
     unions = unions.to(device)

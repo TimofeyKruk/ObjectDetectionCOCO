@@ -99,11 +99,14 @@ class CocoDetection(VisionDataset):
         from pycocotools.coco import COCO
         self.coco = COCO(annFile)
         # @@ My code @@
-        if no_person is True:
-            catNms = ["car", "bird", "cat", "dog"]
+        # if no_person is True:
+        #     catNms = ["car", "bird", "cat", "dog"]
+        #
+        # else:
+        #     catNms = ["person", "car", "bird", "cat", "dog"]
 
-        else:
-            catNms = ["person", "car", "bird", "cat", "dog"]
+        # catNms = ["person", "car", "airplane", "bicycle", "train"]
+        catNms = ["person", "car"]
 
         self.cat_ids = self.coco.getCatIds(catNms=catNms)
         print("self.cat_ids: ", self.cat_ids)
@@ -112,10 +115,9 @@ class CocoDetection(VisionDataset):
         img_ids = set()
         for cat_id in self.cat_ids[::-1]:
             # TODO: Delete [::-1]! It is for not only person being chosen
-            for im_id in self.coco.getImgIds(catIds=cat_id)[:7000]:
+            for im_id in self.coco.getImgIds(catIds=cat_id)[:22050]:
                 img_ids.add(im_id)
             print("Cat id: ", cat_id, "Img id len: ", len(img_ids))
-
 
         # TODO: DELETE [:12000]! It is for overfitting ability checking
         img_ids = list(img_ids)
@@ -134,7 +136,9 @@ class CocoDetection(VisionDataset):
         coco = self.coco
         img_id = self.ids[index]
 
-        catIds = coco.getCatIds(catNms=["person", "car", "bird", "cat", "dog"])
+        catIds = coco.getCatIds(catNms=["person", "car"])
+        # catIds = coco.getCatIds(catNms=["person", "car", "bird", "cat", "dog"])
+        # catIds = coco.getCatIds(catNms=["person", "car", "airplane", "bicycle", "train"])
 
         ann_ids = coco.getAnnIds(imgIds=img_id, catIds=catIds)
 
